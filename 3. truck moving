@@ -1,0 +1,2411 @@
+import bpy
+import math
+from mathutils import Vector
+
+
+# ============================================================
+# TCA - CODE 3
+# TRUCK DRIVE + RAMP + BASEMENT + CINEMATIC CAMERA
+#
+# REQUIRE:
+#
+# CODE 1:
+# TCA CBD BUILDING V4
+#
+# CODE 2:
+# FABCON DELIVERY TRUCK V3
+#
+#
+# SEQUENCE:
+#
+# STREET
+#   ↓
+# TURN TO GARAGE
+#   ↓
+# GARAGE APPROACH
+#   ↓
+# PORTAL
+#   ↓
+# RAMP
+#   ↓
+# BASEMENT
+#   ↓
+# B1 DRIVE AISLE
+#   ↓
+# LIFT LOADING AREA
+#
+#
+# CAMERA:
+#
+# - follows vehicle
+# - changes angle by phase
+# - tries multiple viewpoints
+# - ray-casts against building geometry
+# - avoids obstructed camera positions
+# - keeps full truck visible
+#
+# ============================================================
+
+
+# ============================================================
+# 01. SETTINGS
+# ============================================================
+
+FPS = 24
+
+BAKE_STEP = 2
+
+CAMERA_NAME = "CAM_TRUCK_CODE3"
+
+CAMERA_TARGET_NAME = "CAM_TRUCK_CODE3_TARGET"
+
+
+# ============================================================
+# 02. TIMELINE
+# ============================================================
+
+F_START = 1
+
+F_ROAD_END = 160
+
+F_TURN_END = 220
+
+F_APPROACH_END = 270
+
+F_PORTAL = 290
+
+F_RAMP_START = 310
+
+F_TOP_TRANSITION = 340
+
+F_MAIN_RAMP_END = 430
+
+F_RAMP_END = 465
+
+F_B1_AISLE = 535
+
+F_B1_SOUTH = 590
+
+F_B1_WEST = 640
+
+F_LIFT = 690
+
+F_END = 730
+
+
+# ============================================================
+# 03. CAMERA SETTINGS
+# ============================================================
+
+CAM_CLIP_START = 0.08
+
+CAM_CLIP_END = 2000
+
+
+# Road camera
+
+ROAD_BACK = 11.0
+ROAD_SIDE = 5.5
+ROAD_HEIGHT = 4.2
+
+
+# Garage approach
+
+APPROACH_DISTANCE = 9.0
+APPROACH_SIDE = 5.0
+APPROACH_HEIGHT = 4.0
+
+
+# Ramp camera
+
+RAMP_DISTANCE = 8.5
+RAMP_SIDE = 4.0
+RAMP_HEIGHT = 2.8
+
+
+# Basement camera
+
+B1_DISTANCE = 8.0
+B1_SIDE = 4.5
+B1_HEIGHT = 2.10
+
+
+# ============================================================
+# 04. FIND REQUIRED OBJECTS
+# ============================================================
+
+scene = bpy.context.scene
+
+scene.render.fps = FPS
+
+
+truck = bpy.data.objects.get(
+    "TRUCK_MASTER"
+)
+
+
+if truck is None:
+
+    raise Exception(
+        "Không tìm thấy TRUCK_MASTER. "
+        "Hãy chạy Code 2 Truck trước."
+    )
+
+
+road = bpy.data.objects.get(
+    "City Road Asphalt"
+)
+
+
+if road is None:
+
+    raise Exception(
+        "Không tìm thấy City Road Asphalt. "
+        "Hãy chạy Building V4 trước."
+    )
+
+
+# ============================================================
+# 05. REFERENCE HELPER
+# ============================================================
+
+def get_ref(name):
+
+    obj = bpy.data.objects.get(name)
+
+    if obj is None:
+
+        raise Exception(
+            "Không tìm thấy reference: "
+            + name
+        )
+
+    return (
+        obj.matrix_world.translation.copy()
+    )
+
+
+START_REF = get_ref(
+    "REF_TRUCK_START_ACTUAL"
+)
+
+
+GARAGE_TURN = get_ref(
+    "REF_GARAGE_TURN"
+)
+
+
+GARAGE_APPROACH = get_ref(
+    "REF_GARAGE_APPROACH"
+)
+
+
+GARAGE_PORTAL = get_ref(
+    "REF_GARAGE_PORTAL"
+)
+
+
+RAMP_START = get_ref(
+    "REF_RAMP_START"
+)
+
+
+RAMP_TOP = get_ref(
+    "REF_RAMP_TRANSITION_TOP"
+)
+
+
+RAMP_MAIN_END = get_ref(
+    "REF_RAMP_MAIN_END"
+)
+
+
+RAMP_END = get_ref(
+    "REF_RAMP_END"
+)
+
+
+B1_REF = get_ref(
+    "REF_B1_LOADING"
+)
+
+
+LIFT_REF = get_ref(
+    "REF_LIFT_LOADING"
+)
+
+
+# ============================================================
+# 06. WHEELS
+# ============================================================
+
+wheel_fl = bpy.data.objects.get(
+    "WHEEL_FL_MASTER"
+)
+
+wheel_fr = bpy.data.objects.get(
+    "WHEEL_FR_MASTER"
+)
+
+wheel_rl = bpy.data.objects.get(
+    "WHEEL_RL_MASTER"
+)
+
+wheel_rr = bpy.data.objects.get(
+    "WHEEL_RR_MASTER"
+)
+
+
+wheels = [
+
+    wheel_fl,
+    wheel_fr,
+    wheel_rl,
+    wheel_rr
+
+]
+
+
+for wheel in wheels:
+
+    if wheel is None:
+
+        raise Exception(
+            "Không tìm thấy wheel master. "
+            "Run Code 2 Truck V3 trước."
+        )
+
+
+# ============================================================
+# 07. TRUCK PARAMETERS
+# ============================================================
+
+WHEEL_RADIUS = float(
+    truck.get(
+        "wheel_radius",
+        0.45
+    )
+)
+
+
+FRONT_AXLE_X = float(
+    truck.get(
+        "front_axle_x",
+        3.15
+    )
+)
+
+
+REAR_AXLE_X = float(
+    truck.get(
+        "rear_axle_x",
+        -1.55
+    )
+)
+
+
+WHEELBASE = (
+    FRONT_AXLE_X
+    - REAR_AXLE_X
+)
+
+
+FRONT_TRACK = 1.82
+
+REAR_TRACK = 1.72
+
+
+# ============================================================
+# 08. DELETE PREVIOUS CODE 3 CAMERA
+# ============================================================
+
+for name in [
+
+    CAMERA_NAME,
+    CAMERA_TARGET_NAME,
+
+    "STEER_FL_MASTER",
+    "STEER_FR_MASTER"
+
+]:
+
+    obj = bpy.data.objects.get(
+        name
+    )
+
+    if obj:
+
+        bpy.data.objects.remove(
+            obj,
+            do_unlink=True
+        )
+
+
+# ============================================================
+# REMOVE OLD CODE 3 MARKERS
+# ============================================================
+
+for marker in list(
+    scene.timeline_markers
+):
+
+    if marker.name.startswith(
+        "CODE3_"
+    ):
+
+        scene.timeline_markers.remove(
+            marker
+        )
+
+
+# ============================================================
+# 09. CLEAR OLD ANIMATION
+# ============================================================
+
+if truck.animation_data:
+
+    truck.animation_data_clear()
+
+
+for wheel in wheels:
+
+    if wheel.animation_data:
+
+        wheel.animation_data_clear()
+
+
+# ============================================================
+# 10. RESET WHEEL PARENTS
+#
+# Makes Code 3 safe to re-run.
+# ============================================================
+
+wheel_fl.parent = truck
+
+wheel_fl.location = (
+    FRONT_AXLE_X,
+    FRONT_TRACK / 2,
+    WHEEL_RADIUS
+)
+
+
+wheel_fr.parent = truck
+
+wheel_fr.location = (
+    FRONT_AXLE_X,
+    -FRONT_TRACK / 2,
+    WHEEL_RADIUS
+)
+
+
+wheel_rl.parent = truck
+
+wheel_rl.location = (
+    REAR_AXLE_X,
+    REAR_TRACK / 2,
+    WHEEL_RADIUS
+)
+
+
+wheel_rr.parent = truck
+
+wheel_rr.location = (
+    REAR_AXLE_X,
+    -REAR_TRACK / 2,
+    WHEEL_RADIUS
+)
+
+
+# ============================================================
+# 11. FRONT STEERING PIVOTS
+#
+# STEER
+#   ↓
+# WHEEL MASTER
+#      ↓
+# wheel geometry
+#
+# Steering = Z
+# Wheel spin = Y
+# ============================================================
+
+def create_steer_master(
+    name,
+    wheel,
+    location
+):
+
+    master = bpy.data.objects.new(
+        name,
+        None
+    )
+
+
+    # use same collection as truck
+
+    bpy.context.scene.collection.objects.link(
+        master
+    )
+
+
+    master.parent = truck
+
+    master.location = location
+
+    master.rotation_mode = 'XYZ'
+
+
+    wheel.parent = master
+
+    wheel.location = (
+        0,
+        0,
+        0
+    )
+
+    wheel.rotation_mode = 'XYZ'
+
+
+    return master
+
+
+steer_fl = create_steer_master(
+    "STEER_FL_MASTER",
+    wheel_fl,
+    (
+        FRONT_AXLE_X,
+        FRONT_TRACK / 2,
+        WHEEL_RADIUS
+    )
+)
+
+
+steer_fr = create_steer_master(
+    "STEER_FR_MASTER",
+    wheel_fr,
+    (
+        FRONT_AXLE_X,
+        -FRONT_TRACK / 2,
+        WHEEL_RADIUS
+    )
+)
+
+
+wheel_rl.rotation_mode = 'XYZ'
+
+wheel_rr.rotation_mode = 'XYZ'
+
+
+# ============================================================
+# 12. PATH INTERPOLATION HELPERS
+# ============================================================
+
+PATH = {}
+
+
+def add_line(
+    frame_start,
+    frame_end,
+    point_start,
+    point_end
+):
+
+    p0 = Vector(point_start)
+    p1 = Vector(point_end)
+
+
+    for frame in range(
+        frame_start,
+        frame_end + 1,
+        BAKE_STEP
+    ):
+
+        if frame_end == frame_start:
+
+            t = 0
+
+        else:
+
+            t = (
+                frame - frame_start
+            ) / (
+                frame_end - frame_start
+            )
+
+
+        t = max(
+            0.0,
+            min(
+                1.0,
+                t
+            )
+        )
+
+
+        PATH[frame] = (
+            p0.lerp(
+                p1,
+                t
+            )
+        )
+
+
+    PATH[frame_end] = (
+        p1.copy()
+    )
+
+
+def bezier_point(
+    p0,
+    p1,
+    p2,
+    p3,
+    t
+):
+
+    u = (
+        1.0 - t
+    )
+
+
+    return (
+
+        (u ** 3) * p0
+
+        + 3
+        * (u ** 2)
+        * t
+        * p1
+
+        + 3
+        * u
+        * (t ** 2)
+        * p2
+
+        + (t ** 3)
+        * p3
+
+    )
+
+
+def add_bezier(
+    frame_start,
+    frame_end,
+    p0,
+    p1,
+    p2,
+    p3
+):
+
+    p0 = Vector(p0)
+    p1 = Vector(p1)
+    p2 = Vector(p2)
+    p3 = Vector(p3)
+
+
+    for frame in range(
+        frame_start,
+        frame_end + 1,
+        BAKE_STEP
+    ):
+
+        t = (
+            frame - frame_start
+        ) / (
+            frame_end - frame_start
+        )
+
+
+        t = max(
+            0.0,
+            min(
+                1.0,
+                t
+            )
+        )
+
+
+        PATH[frame] = bezier_point(
+            p0,
+            p1,
+            p2,
+            p3,
+            t
+        )
+
+
+    PATH[frame_end] = (
+        p3.copy()
+    )
+
+
+# ============================================================
+# 13. ROAD START POSITION
+# ============================================================
+
+START = START_REF.copy()
+
+
+# ============================================================
+# 14. ROAD STRAIGHT
+# ============================================================
+
+TURN_START = GARAGE_TURN.copy()
+
+
+add_line(
+    F_START,
+    F_ROAD_END,
+    START,
+    TURN_START
+)
+
+
+# ============================================================
+# 15. SMOOTH 90 DEGREE GARAGE TURN
+#
+# Road direction:
+# +X
+#
+# becomes:
+# +Y toward garage
+# ============================================================
+
+p0 = TURN_START.copy()
+
+
+p3 = GARAGE_APPROACH.copy()
+
+
+p1 = p0 + Vector(
+    (
+        4.5,
+        0,
+        0
+    )
+)
+
+
+p2 = p3 + Vector(
+    (
+        0,
+        -3.8,
+        0
+    )
+)
+
+
+add_bezier(
+    F_ROAD_END,
+    F_TURN_END,
+    p0,
+    p1,
+    p2,
+    p3
+)
+
+
+# ============================================================
+# 16. GARAGE APPROACH
+# ============================================================
+
+add_line(
+    F_TURN_END,
+    F_APPROACH_END,
+    GARAGE_APPROACH,
+    GARAGE_PORTAL
+)
+
+
+# ============================================================
+# 17. PORTAL -> RAMP START
+# ============================================================
+
+add_line(
+    F_APPROACH_END,
+    F_RAMP_START,
+    GARAGE_PORTAL,
+    RAMP_START
+)
+
+
+# ============================================================
+# 18. TOP RAMP TRANSITION
+# ============================================================
+
+add_line(
+    F_RAMP_START,
+    F_TOP_TRANSITION,
+    RAMP_START,
+    RAMP_TOP
+)
+
+
+# ============================================================
+# 19. MAIN RAMP
+# ============================================================
+
+add_line(
+    F_TOP_TRANSITION,
+    F_MAIN_RAMP_END,
+    RAMP_TOP,
+    RAMP_MAIN_END
+)
+
+
+# ============================================================
+# 20. BOTTOM TRANSITION
+# ============================================================
+
+add_line(
+    F_MAIN_RAMP_END,
+    F_RAMP_END,
+    RAMP_MAIN_END,
+    RAMP_END
+)
+
+
+# ============================================================
+# 21. BASEMENT ROUTE
+#
+# We deliberately create a larger path so the
+# 7.6m truck has room to turn.
+# ============================================================
+
+
+# safe aisle point derived from REF_B1_LOADING
+
+B1_AISLE = (
+    B1_REF
+    + Vector(
+        (
+            2.0,
+            0,
+            0
+        )
+    )
+)
+
+
+B1_AISLE.z = (
+    RAMP_END.z
+)
+
+
+# ------------------------------------------------------------
+# Ramp end -> B1 aisle
+#
+# Start tangent = north
+# End tangent = south
+#
+# Creates a large U-style transition.
+# ------------------------------------------------------------
+
+p0 = RAMP_END.copy()
+
+
+p3 = B1_AISLE.copy()
+
+
+p1 = p0 + Vector(
+    (
+        0,
+        4.5,
+        0
+    )
+)
+
+
+p2 = p3 + Vector(
+    (
+        0,
+        4.0,
+        0
+    )
+)
+
+
+add_bezier(
+    F_RAMP_END,
+    F_B1_AISLE,
+    p0,
+    p1,
+    p2,
+    p3
+)
+
+
+# ============================================================
+# 22. DRIVE SOUTH THROUGH B1
+# ============================================================
+
+B1_SOUTH = Vector(
+    (
+        B1_AISLE.x,
+        -5.0,
+        RAMP_END.z
+    )
+)
+
+
+add_line(
+    F_B1_AISLE,
+    F_B1_SOUTH,
+    B1_AISLE,
+    B1_SOUTH
+)
+
+
+# ============================================================
+# 23. TURN WEST
+# ============================================================
+
+WEST_ALIGN = Vector(
+    (
+        LIFT_REF.x,
+        -5.0,
+        RAMP_END.z
+    )
+)
+
+
+p0 = B1_SOUTH.copy()
+
+
+p3 = WEST_ALIGN.copy()
+
+
+p1 = p0 + Vector(
+    (
+        0,
+        -3.0,
+        0
+    )
+)
+
+
+p2 = p3 + Vector(
+    (
+        3.0,
+        0,
+        0
+    )
+)
+
+
+add_bezier(
+    F_B1_SOUTH,
+    F_B1_WEST,
+    p0,
+    p1,
+    p2,
+    p3
+)
+
+
+# ============================================================
+# 24. FINAL TURN TOWARD LIFT
+#
+# End tangent is +Y.
+#
+# Truck stops with CAB facing the lift.
+# ============================================================
+
+FINAL_POSITION = LIFT_REF.copy()
+
+
+p0 = WEST_ALIGN.copy()
+
+
+p3 = FINAL_POSITION.copy()
+
+
+p1 = p0 + Vector(
+    (
+        -3.5,
+        0,
+        0
+    )
+)
+
+
+p2 = p3 + Vector(
+    (
+        0,
+        -3.8,
+        0
+    )
+)
+
+
+add_bezier(
+    F_B1_WEST,
+    F_LIFT,
+    p0,
+    p1,
+    p2,
+    p3
+)
+
+
+# ============================================================
+# 25. HOLD FINAL POSITION
+# ============================================================
+
+add_line(
+    F_LIFT,
+    F_END,
+    FINAL_POSITION,
+    FINAL_POSITION
+)
+
+
+# ============================================================
+# 26. GET SORTED PATH FRAMES
+# ============================================================
+
+frames = sorted(
+    PATH.keys()
+)
+
+
+# ============================================================
+# 27. PATH TANGENT
+# ============================================================
+
+def tangent_at(index):
+
+    frame = frames[index]
+
+
+    if index == 0:
+
+        next_frame = frames[
+            index + 1
+        ]
+
+
+        tangent = (
+
+            PATH[next_frame]
+            - PATH[frame]
+
+        )
+
+
+    elif index == (
+        len(frames) - 1
+    ):
+
+        previous_frame = frames[
+            index - 1
+        ]
+
+
+        tangent = (
+
+            PATH[frame]
+            - PATH[previous_frame]
+
+        )
+
+
+    else:
+
+        previous_frame = frames[
+            index - 1
+        ]
+
+
+        next_frame = frames[
+            index + 1
+        ]
+
+
+        tangent = (
+
+            PATH[next_frame]
+            - PATH[previous_frame]
+
+        )
+
+
+    if tangent.length < 0.001:
+
+        tangent = Vector(
+            (
+                1,
+                0,
+                0
+            )
+        )
+
+
+    tangent.normalize()
+
+
+    return tangent
+
+
+# ============================================================
+# 28. TRUCK ANIMATION
+# ============================================================
+
+truck.rotation_mode = (
+    'QUATERNION'
+)
+
+
+for index, frame in enumerate(
+    frames
+):
+
+    location = PATH[
+        frame
+    ]
+
+
+    forward = tangent_at(
+        index
+    )
+
+
+    # local truck +X follows route
+
+    rotation = (
+        forward.to_track_quat(
+            'X',
+            'Z'
+        )
+    )
+
+
+    truck.location = (
+        location
+    )
+
+
+    truck.rotation_quaternion = (
+        rotation
+    )
+
+
+    truck.keyframe_insert(
+        data_path="location",
+        frame=frame
+    )
+
+
+    truck.keyframe_insert(
+        data_path="rotation_quaternion",
+        frame=frame
+    )
+
+
+# ============================================================
+# 29. MAKE TRUCK PATH LINEAR
+#
+# Because path is already densely baked.
+# Prevents Bezier overshoot into walls.
+# ============================================================
+
+if truck.animation_data:
+
+    action = (
+        truck.animation_data.action
+    )
+
+
+    if action:
+
+        for curve in action.fcurves:
+
+            for key in curve.keyframe_points:
+
+                key.interpolation = (
+                    'LINEAR'
+                )
+
+
+# ============================================================
+# 30. WHEEL ROTATION + STEERING
+# ============================================================
+
+spin_angle = 0.0
+
+previous_position = None
+
+previous_yaw = None
+
+
+for index, frame in enumerate(
+    frames
+):
+
+    position = PATH[
+        frame
+    ]
+
+
+    forward = tangent_at(
+        index
+    )
+
+
+    horizontal = Vector(
+        (
+            forward.x,
+            forward.y,
+            0
+        )
+    )
+
+
+    if horizontal.length < 0.001:
+
+        horizontal = Vector(
+            (
+                1,
+                0,
+                0
+            )
+        )
+
+
+    horizontal.normalize()
+
+
+    yaw = math.atan2(
+        horizontal.y,
+        horizontal.x
+    )
+
+
+    # ========================================================
+    # WHEEL SPIN
+    # ========================================================
+
+    if previous_position is not None:
+
+        distance = (
+
+            position
+            - previous_position
+
+        ).length
+
+
+        spin_angle += (
+            distance
+            / WHEEL_RADIUS
+        )
+
+
+    for wheel in wheels:
+
+        wheel.rotation_mode = (
+            'XYZ'
+        )
+
+
+        wheel.rotation_euler.y = (
+            spin_angle
+        )
+
+
+        wheel.keyframe_insert(
+            data_path="rotation_euler",
+            frame=frame,
+            index=1
+        )
+
+
+    # ========================================================
+    # FRONT STEERING ANGLE
+    # ========================================================
+
+    steer_angle = 0.0
+
+
+    if (
+        previous_yaw is not None
+        and
+        previous_position is not None
+    ):
+
+        delta_yaw = (
+            yaw
+            - previous_yaw
+        )
+
+
+        # normalize to -pi / +pi
+
+        while delta_yaw > math.pi:
+
+            delta_yaw -= (
+                2 * math.pi
+            )
+
+
+        while delta_yaw < -math.pi:
+
+            delta_yaw += (
+                2 * math.pi
+            )
+
+
+        distance = max(
+            (
+                position
+                - previous_position
+            ).length,
+            0.01
+        )
+
+
+        curvature = (
+            delta_yaw
+            / distance
+        )
+
+
+        steer_angle = math.atan(
+            WHEELBASE
+            * curvature
+        )
+
+
+        max_steer = math.radians(
+            28
+        )
+
+
+        steer_angle = max(
+            -max_steer,
+            min(
+                max_steer,
+                steer_angle
+            )
+        )
+
+
+    steer_fl.rotation_euler.z = (
+        steer_angle
+    )
+
+
+    steer_fr.rotation_euler.z = (
+        steer_angle
+    )
+
+
+    steer_fl.keyframe_insert(
+        data_path="rotation_euler",
+        frame=frame,
+        index=2
+    )
+
+
+    steer_fr.keyframe_insert(
+        data_path="rotation_euler",
+        frame=frame,
+        index=2
+    )
+
+
+    previous_position = (
+        position.copy()
+    )
+
+
+    previous_yaw = (
+        yaw
+    )
+
+
+# ============================================================
+# 31. LINEAR WHEEL ANIMATION
+# ============================================================
+
+for obj in [
+
+    wheel_fl,
+    wheel_fr,
+    wheel_rl,
+    wheel_rr,
+    steer_fl,
+    steer_fr
+
+]:
+
+    if not obj.animation_data:
+
+        continue
+
+
+    action = (
+        obj.animation_data.action
+    )
+
+
+    if not action:
+
+        continue
+
+
+    for curve in action.fcurves:
+
+        for key in curve.keyframe_points:
+
+            key.interpolation = (
+                'LINEAR'
+            )
+
+
+# ============================================================
+# 32. CAMERA CREATE
+# ============================================================
+
+camera_data = bpy.data.cameras.new(
+    CAMERA_NAME
+)
+
+
+camera_data.lens = 35
+
+camera_data.clip_start = (
+    CAM_CLIP_START
+)
+
+camera_data.clip_end = (
+    CAM_CLIP_END
+)
+
+
+camera = bpy.data.objects.new(
+    CAMERA_NAME,
+    camera_data
+)
+
+
+scene.collection.objects.link(
+    camera
+)
+
+
+camera.rotation_mode = (
+    'QUATERNION'
+)
+
+
+# ============================================================
+# 33. CAMERA TARGET
+# ============================================================
+
+camera_target = bpy.data.objects.new(
+    CAMERA_TARGET_NAME,
+    None
+)
+
+
+scene.collection.objects.link(
+    camera_target
+)
+
+
+camera_target.empty_display_type = (
+    'SPHERE'
+)
+
+camera_target.empty_display_size = (
+    0.15
+)
+
+
+# ============================================================
+# 34. IS OBJECT PART OF TRUCK?
+# ============================================================
+
+def belongs_to_truck(obj):
+
+    current = obj
+
+
+    while current is not None:
+
+        if current == truck:
+
+            return True
+
+
+        current = current.parent
+
+
+    return False
+
+
+# ============================================================
+# 35. RAY CAST VISIBILITY TEST
+# ============================================================
+
+depsgraph = bpy.context.evaluated_depsgraph_get()
+
+
+def ray_visible(
+    camera_position,
+    target_position
+):
+
+    direction = (
+        target_position
+        - camera_position
+    )
+
+
+    distance = (
+        direction.length
+    )
+
+
+    if distance < 0.01:
+
+        return True
+
+
+    direction.normalize()
+
+
+    result = scene.ray_cast(
+
+        depsgraph,
+
+        camera_position,
+
+        direction,
+
+        distance=distance + 0.15
+
+    )
+
+
+    hit = result[0]
+
+
+    if not hit:
+
+        return True
+
+
+    hit_object = result[4]
+
+
+    if hit_object is None:
+
+        return True
+
+
+    if belongs_to_truck(
+        hit_object
+    ):
+
+        return True
+
+
+    return False
+
+
+# ============================================================
+# 36. CAMERA VISIBILITY SCORE
+#
+# Tests:
+#
+# centre
+# cab
+# rear tray
+# roof
+# low body
+#
+# ============================================================
+
+TRUCK_CHECK_POINTS = [
+
+    Vector(
+        (
+            0,
+            0,
+            1.45
+        )
+    ),
+
+    Vector(
+        (
+            3.20,
+            0,
+            1.60
+        )
+    ),
+
+    Vector(
+        (
+            -2.80,
+            0,
+            1.45
+        )
+    ),
+
+    Vector(
+        (
+            0,
+            0,
+            2.75
+        )
+    ),
+
+    Vector(
+        (
+            0,
+            0,
+            0.65
+        )
+    )
+
+]
+
+
+def visibility_score(
+    camera_position
+):
+
+    score = 0
+
+
+    truck_world = (
+        truck.matrix_world
+    )
+
+
+    for local_point in (
+        TRUCK_CHECK_POINTS
+    ):
+
+        target = (
+            truck_world
+            @ local_point
+        )
+
+
+        if ray_visible(
+            camera_position,
+            target
+        ):
+
+            score += 1
+
+
+    return score
+
+
+# ============================================================
+# 37. GENERATE CAMERA CANDIDATES
+# ============================================================
+
+WORLD_UP = Vector(
+    (
+        0,
+        0,
+        1
+    )
+)
+
+
+def camera_candidates(
+    frame,
+    truck_position,
+    forward
+):
+
+    side = (
+        forward.cross(
+            WORLD_UP
+        )
+    )
+
+
+    if side.length < 0.001:
+
+        side = Vector(
+            (
+                0,
+                -1,
+                0
+            )
+        )
+
+
+    side.normalize()
+
+
+    horizontal_forward = Vector(
+        (
+            forward.x,
+            forward.y,
+            0
+        )
+    )
+
+
+    if horizontal_forward.length < 0.001:
+
+        horizontal_forward = Vector(
+            (
+                1,
+                0,
+                0
+            )
+        )
+
+
+    horizontal_forward.normalize()
+
+
+    candidates = []
+
+
+    # ========================================================
+    # ROAD
+    #
+    # Rear three-quarter
+    # ========================================================
+
+    if frame <= F_TURN_END:
+
+        candidates = [
+
+            truck_position
+            - horizontal_forward
+            * ROAD_BACK
+            + side
+            * ROAD_SIDE
+            + WORLD_UP
+            * ROAD_HEIGHT,
+
+            truck_position
+            - horizontal_forward
+            * ROAD_BACK
+            - side
+            * ROAD_SIDE
+            + WORLD_UP
+            * ROAD_HEIGHT,
+
+            truck_position
+            - horizontal_forward
+            * 7.0
+            + side
+            * 9.0
+            + WORLD_UP
+            * 4.8,
+
+            truck_position
+            - horizontal_forward
+            * 7.0
+            - side
+            * 9.0
+            + WORLD_UP
+            * 4.8
+
+        ]
+
+
+    # ========================================================
+    # GARAGE APPROACH
+    #
+    # Front/side view to clearly show entrance.
+    # ========================================================
+
+    elif frame <= F_RAMP_START:
+
+        candidates = [
+
+            truck_position
+            + horizontal_forward
+            * APPROACH_DISTANCE
+            + side
+            * APPROACH_SIDE
+            + WORLD_UP
+            * APPROACH_HEIGHT,
+
+            truck_position
+            + horizontal_forward
+            * APPROACH_DISTANCE
+            - side
+            * APPROACH_SIDE
+            + WORLD_UP
+            * APPROACH_HEIGHT,
+
+            truck_position
+            - horizontal_forward
+            * 8.0
+            + side
+            * 5.0
+            + WORLD_UP
+            * 4.0,
+
+            truck_position
+            - horizontal_forward
+            * 8.0
+            - side
+            * 5.0
+            + WORLD_UP
+            * 4.0
+
+        ]
+
+
+    # ========================================================
+    # RAMP
+    #
+    # Camera primarily travels AHEAD of vehicle.
+    #
+    # Because Building V4 has an OPEN ramp void,
+    # this gives a clean view down the ramp.
+    # ========================================================
+
+    elif frame <= F_RAMP_END:
+
+        candidates = [
+
+            truck_position
+            + horizontal_forward
+            * RAMP_DISTANCE
+            + side
+            * RAMP_SIDE
+            + WORLD_UP
+            * RAMP_HEIGHT,
+
+            truck_position
+            + horizontal_forward
+            * RAMP_DISTANCE
+            - side
+            * RAMP_SIDE
+            + WORLD_UP
+            * RAMP_HEIGHT,
+
+            truck_position
+            - horizontal_forward
+            * 7.0
+            + side
+            * 4.0
+            + WORLD_UP
+            * 3.0,
+
+            truck_position
+            - horizontal_forward
+            * 7.0
+            - side
+            * 4.0
+            + WORLD_UP
+            * 3.0
+
+        ]
+
+
+    # ========================================================
+    # BASEMENT
+    #
+    # Lower camera so it stays below slab soffit.
+    # ========================================================
+
+    else:
+
+        candidates = [
+
+            truck_position
+            + horizontal_forward
+            * B1_DISTANCE
+            + side
+            * B1_SIDE
+            + WORLD_UP
+            * B1_HEIGHT,
+
+            truck_position
+            + horizontal_forward
+            * B1_DISTANCE
+            - side
+            * B1_SIDE
+            + WORLD_UP
+            * B1_HEIGHT,
+
+            truck_position
+            - horizontal_forward
+            * 7.0
+            + side
+            * 4.0
+            + WORLD_UP
+            * 2.0,
+
+            truck_position
+            - horizontal_forward
+            * 7.0
+            - side
+            * 4.0
+            + WORLD_UP
+            * 2.0,
+
+            truck_position
+            + side
+            * 8.0
+            + WORLD_UP
+            * 2.0,
+
+            truck_position
+            - side
+            * 8.0
+            + WORLD_UP
+            * 2.0
+
+        ]
+
+
+    return candidates
+
+
+# ============================================================
+# 38. CAMERA BAKE
+# ============================================================
+
+previous_camera_position = None
+
+
+for frame in range(
+    F_START,
+    F_END + 1,
+    BAKE_STEP
+):
+
+    scene.frame_set(
+        frame
+    )
+
+
+    bpy.context.view_layer.update()
+
+
+    truck_position = (
+        truck.matrix_world.translation.copy()
+    )
+
+
+    truck_rotation = (
+        truck.matrix_world.to_quaternion()
+    )
+
+
+    forward = (
+
+        truck_rotation
+
+        @ Vector(
+            (
+                1,
+                0,
+                0
+            )
+        )
+    )
+
+
+    forward.normalize()
+
+
+    candidates = camera_candidates(
+        frame,
+        truck_position,
+        forward
+    )
+
+
+    best_candidate = None
+
+    best_score = (
+        -999999.0
+    )
+
+
+    # ========================================================
+    # Test each camera position.
+    #
+    # Visibility is highest priority.
+    # Continuity prevents camera jumping unnecessarily.
+    # ========================================================
+
+    for candidate in candidates:
+
+        visible = visibility_score(
+            candidate
+        )
+
+
+        score = (
+            visible * 100.0
+        )
+
+
+        if previous_camera_position is not None:
+
+            camera_move = (
+
+                candidate
+                - previous_camera_position
+
+            ).length
+
+
+            score -= (
+                camera_move * 0.25
+            )
+
+
+        if score > best_score:
+
+            best_score = score
+
+            best_candidate = (
+                candidate.copy()
+            )
+
+
+    # fallback
+
+    if best_candidate is None:
+
+        best_candidate = (
+            candidates[0].copy()
+        )
+
+
+    previous_camera_position = (
+        best_candidate.copy()
+    )
+
+
+    # ========================================================
+    # CAMERA TARGET
+    # ========================================================
+
+    target_position = (
+
+        truck_position
+
+        + Vector(
+            (
+                0,
+                0,
+                1.35
+            )
+        )
+    )
+
+
+    # Slightly favour truck centre/front on the road
+
+    if frame <= F_RAMP_START:
+
+        target_position += (
+            forward * 0.45
+        )
+
+
+    # ========================================================
+    # CAMERA ORIENTATION
+    # ========================================================
+
+    direction = (
+
+        target_position
+        - best_candidate
+
+    )
+
+
+    camera.location = (
+        best_candidate
+    )
+
+
+    camera.rotation_quaternion = (
+
+        direction.to_track_quat(
+            '-Z',
+            'Y'
+        )
+    )
+
+
+    camera_target.location = (
+        target_position
+    )
+
+
+    # ========================================================
+    # LENS BY PHASE
+    # ========================================================
+
+    if frame <= F_ROAD_END:
+
+        camera.data.lens = 38
+
+
+    elif frame <= F_RAMP_START:
+
+        camera.data.lens = 34
+
+
+    elif frame <= F_RAMP_END:
+
+        camera.data.lens = 30
+
+
+    else:
+
+        camera.data.lens = 27
+
+
+    camera.keyframe_insert(
+        data_path="location",
+        frame=frame
+    )
+
+
+    camera.keyframe_insert(
+        data_path="rotation_quaternion",
+        frame=frame
+    )
+
+
+    camera.data.keyframe_insert(
+        data_path="lens",
+        frame=frame
+    )
+
+
+# ============================================================
+# 39. HOLD CAMERA AT END
+# ============================================================
+
+scene.frame_set(
+    F_END
+)
+
+
+bpy.context.view_layer.update()
+
+
+# ============================================================
+# 40. CAMERA INTERPOLATION
+#
+# Dense LINEAR bake prevents camera from Bezier-curving
+# into walls or columns.
+# ============================================================
+
+if camera.animation_data:
+
+    action = (
+        camera.animation_data.action
+    )
+
+
+    if action:
+
+        for curve in action.fcurves:
+
+            for key in curve.keyframe_points:
+
+                key.interpolation = (
+                    'LINEAR'
+                )
+
+
+if camera.data.animation_data:
+
+    action = (
+        camera.data.animation_data.action
+    )
+
+
+    if action:
+
+        for curve in action.fcurves:
+
+            for key in curve.keyframe_points:
+
+                key.interpolation = (
+                    'LINEAR'
+                )
+
+
+# ============================================================
+# 41. SET ACTIVE CAMERA
+# ============================================================
+
+scene.camera = (
+    camera
+)
+
+
+# ============================================================
+# 42. TIMELINE MARKERS
+# ============================================================
+
+markers = [
+
+    (
+        "CODE3_01_STREET",
+        F_START
+    ),
+
+    (
+        "CODE3_02_TURN_TO_GARAGE",
+        F_ROAD_END
+    ),
+
+    (
+        "CODE3_03_GARAGE_APPROACH",
+        F_TURN_END
+    ),
+
+    (
+        "CODE3_04_GARAGE_PORTAL",
+        F_PORTAL
+    ),
+
+    (
+        "CODE3_05_RAMP_START",
+        F_RAMP_START
+    ),
+
+    (
+        "CODE3_06_MAIN_RAMP",
+        F_TOP_TRANSITION
+    ),
+
+    (
+        "CODE3_07_B1",
+        F_RAMP_END
+    ),
+
+    (
+        "CODE3_08_B1_DRIVE",
+        F_B1_AISLE
+    ),
+
+    (
+        "CODE3_09_TURN_TO_LIFT",
+        F_B1_SOUTH
+    ),
+
+    (
+        "CODE3_10_LIFT_LOADING",
+        F_LIFT
+    )
+
+]
+
+
+for name, frame in markers:
+
+    marker = scene.timeline_markers.new(
+        name,
+        frame=frame
+    )
+
+
+# ============================================================
+# 43. TIMELINE
+# ============================================================
+
+scene.frame_start = (
+    F_START
+)
+
+
+scene.frame_end = (
+    F_END
+)
+
+
+scene.frame_set(
+    F_START
+)
+
+
+# ============================================================
+# 44. SELECT CAMERA
+# ============================================================
+
+bpy.ops.object.select_all(
+    action='DESELECT'
+)
+
+
+camera.select_set(
+    True
+)
+
+
+bpy.context.view_layer.objects.active = (
+    camera
+)
+
+
+# ============================================================
+# 45. FINAL REPORT
+# ============================================================
+
+print(
+    "\n"
+    "================================================="
+)
+
+print(
+    "TCA CODE 3 - TRUCK DRIVE COMPLETE"
+)
+
+print(
+    "================================================="
+)
+
+print(
+    ""
+)
+
+print(
+    "Sequence:"
+)
+
+print(
+    "STREET"
+)
+
+print(
+    " -> GARAGE TURN"
+)
+
+print(
+    " -> GARAGE APPROACH"
+)
+
+print(
+    " -> PORTAL"
+)
+
+print(
+    " -> RAMP"
+)
+
+print(
+    " -> BASEMENT"
+)
+
+print(
+    " -> B1 DRIVE AISLE"
+)
+
+print(
+    " -> LIFT LOADING AREA"
+)
+
+print(
+    ""
+)
+
+print(
+    "Truck final location:"
+)
+
+print(
+    tuple(
+        round(
+            value,
+            2
+        )
+        for value
+        in FINAL_POSITION
+    )
+)
+
+print(
+    ""
+)
+
+print(
+    "Animation:"
+)
+
+print(
+    "Frames:",
+    F_START,
+    "->",
+    F_END
+)
+
+print(
+    "FPS:",
+    FPS
+)
+
+print(
+    ""
+)
+
+print(
+    "Wheel animation:"
+)
+
+print(
+    "- wheel spin based on travelled distance"
+)
+
+print(
+    "- front wheel steering enabled"
+)
+
+print(
+    ""
+)
+
+print(
+    "Camera:"
+)
+
+print(
+    CAMERA_NAME
+)
+
+print(
+    "- Road rear 3/4 tracking"
+)
+
+print(
+    "- Garage front/side view"
+)
+
+print(
+    "- Camera ahead of truck on ramp"
+)
+
+print(
+    "- Low wide camera inside basement"
+)
+
+print(
+    "- Ray-cast obstruction avoidance"
+)
+
+print(
+    "- Full truck visibility prioritised"
+)
+
+print(
+    "================================================="
+)
