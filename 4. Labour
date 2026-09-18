@@ -1,0 +1,5454 @@
+import bpy
+import math
+from mathutils import Vector, Matrix
+
+
+# ============================================================
+# TCA - CODE 4 V4
+# EXACT STAIR HANDLING + LIFT SCALE + FRONT LIFT CAMERA
+#
+# REQUIRE:
+# CODE 1 = Building V4
+# CODE 2 = FABCON Truck
+# CODE 3 = Truck driving animation
+#
+# SEQUENCE:
+#
+# Truck final position
+#       ↓
+# Truck reverses to unloading bay
+#       ↓
+# 3 workers + trolley
+#       ↓
+# Exact steel stair lifted from truck
+#       ↓
+# Stair moved sideways clear of truck
+#       ↓
+# Stair lowered onto trolley
+#       ↓
+# Trolley travels around truck
+#       ↓
+# Approaches lift
+#       ↓
+# Stair temporarily scales down
+#       ↓
+# Trolley + workers enter lift
+#       ↓
+# Lift travels up
+#       ↓
+# Camera travels vertically outside lift
+#       ↓
+# Stair exits lift
+#       ↓
+# Stair restores to 100% size
+#       ↓
+# Move to staging
+#       ↓
+# Place stair on timber packers
+#       ↓
+# Workers + empty trolley return to lift
+#       ↓
+# Return to B1
+#       ↓
+# Return to truck
+#
+# ============================================================
+
+
+# ============================================================
+# 01. MAIN SETTINGS
+# ============================================================
+
+COLLECTION_NAME = "14_HANDLING_CODE4"
+
+TARGET_LEVEL = "L06"
+
+CODE3_END_FRAME = 730
+
+
+# ============================================================
+# 02. STAIR SCALE INSIDE LIFT
+# ============================================================
+
+# 0.36 means:
+#
+# 4.60m stair becomes approximately 1.66m long.
+#
+# This fits inside the current service lift.
+
+STAIR_LIFT_SCALE = 0.36
+
+
+# ============================================================
+# 03. CAMERA SETTINGS
+# ============================================================
+
+CAMERA_NAME = "CAM_HANDLING_CODE4"
+
+CAMERA_STEP = 3
+
+
+# Camera sits directly in front of lift door.
+
+LIFT_CAMERA_DISTANCE = 7.00
+
+LIFT_CAMERA_HEIGHT = 1.80
+
+
+# ============================================================
+# 04. TIMELINE
+# ============================================================
+
+F_START = 740
+
+
+# ------------------------------------------------------------
+# Truck reverse
+# ------------------------------------------------------------
+
+F_TRUCK_MOVE_START = 742
+
+F_TRUCK_PARK = 805
+
+
+# ------------------------------------------------------------
+# Workers / trolley arrive
+# ------------------------------------------------------------
+
+F_WORKERS_START = 815
+
+F_WORKERS_AT_TRUCK = 855
+
+
+F_TROLLEY_START = 820
+
+F_TROLLEY_AT_TRUCK = 870
+
+
+# ------------------------------------------------------------
+# Unload stair
+# ------------------------------------------------------------
+
+F_UNLOAD_START = 885
+
+F_STAIR_LIFT_CLEAR = 902
+
+F_STAIR_MOVE_SIDE = 930
+
+F_STAIR_ON_TROLLEY = 960
+
+
+# ------------------------------------------------------------
+# Move toward lift
+# ------------------------------------------------------------
+
+F_LEAVE_TRUCK = 975
+
+F_SIDE_CLEAR = 1005
+
+F_CORNER_CLEAR = 1035
+
+F_LIFT_FRONT = 1075
+
+F_ENTER_LIFT = 1115
+
+
+# ------------------------------------------------------------
+# Lift up
+# ------------------------------------------------------------
+
+F_B1_DOOR_CLOSE = 1135
+
+F_LIFT_UP_START = 1150
+
+F_LIFT_UP_END = 1240
+
+F_TARGET_DOOR_OPEN = 1250
+
+F_EXIT_LIFT = 1290
+
+F_UPPER_CLEAR = 1325
+
+
+# ------------------------------------------------------------
+# Upper floor transport
+# ------------------------------------------------------------
+
+F_STORAGE_ROUTE = 1355
+
+F_STORAGE_ARRIVE = 1415
+
+
+# ------------------------------------------------------------
+# Place stair
+# ------------------------------------------------------------
+
+F_PLACE_LIFT = 1435
+
+F_PLACE_SIDE = 1465
+
+F_PLACE_END = 1500
+
+
+# ------------------------------------------------------------
+# Return workers + trolley
+# ------------------------------------------------------------
+
+F_RETURN_START = 1535
+
+F_RETURN_LIFT_FRONT = 1595
+
+F_RETURN_ENTER_LIFT = 1635
+
+F_TARGET_DOOR_CLOSE = 1655
+
+F_LIFT_DOWN_START = 1670
+
+F_LIFT_DOWN_END = 1760
+
+F_B1_RETURN_OPEN = 1770
+
+F_EXIT_B1 = 1810
+
+F_RETURN_CORNER = 1850
+
+F_RETURN_SIDE = 1880
+
+F_RETURN_TRUCK = 1930
+
+F_END = 1970
+
+
+# ============================================================
+# 05. SCALE ANIMATION FRAMES
+# ============================================================
+
+# Stair starts shrinking while approaching lift.
+
+F_SCALE_DOWN_START = (
+    F_LIFT_FRONT - 22
+)
+
+
+# Completely reduced before trolley crosses door.
+
+F_SCALE_DOWN_END = (
+    F_ENTER_LIFT - 6
+)
+
+
+# Stay small until it has exited lift.
+
+F_SCALE_UP_START = (
+    F_EXIT_LIFT
+)
+
+
+# Restore to full size only after it clears door.
+
+F_SCALE_UP_END = (
+    F_UPPER_CLEAR
+)
+
+
+# ============================================================
+# 06. REQUIRED OBJECTS
+# ============================================================
+
+scene = bpy.context.scene
+
+
+truck = bpy.data.objects.get(
+    "TRUCK_MASTER"
+)
+
+
+if truck is None:
+
+    raise Exception(
+        "Không tìm thấy TRUCK_MASTER. "
+        "Run Code 2 trước."
+    )
+
+
+source_cargo = bpy.data.objects.get(
+    "CARGO_STAIR_MASTER"
+)
+
+
+if source_cargo is None:
+
+    raise Exception(
+        "Không tìm thấy CARGO_STAIR_MASTER."
+    )
+
+
+# ============================================================
+# 07. TRUCK PARAMETERS
+# ============================================================
+
+WHEEL_RADIUS = float(
+    truck.get(
+        "wheel_radius",
+        0.45
+    )
+)
+
+
+TRUCK_LENGTH = float(
+    truck.get(
+        "vehicle_length",
+        7.60
+    )
+)
+
+
+TRUCK_WIDTH = float(
+    truck.get(
+        "vehicle_width",
+        2.18
+    )
+)
+
+
+HALF_TRUCK_LENGTH = (
+    TRUCK_LENGTH / 2
+)
+
+
+HALF_TRUCK_WIDTH = (
+    TRUCK_WIDTH / 2
+)
+
+
+# ============================================================
+# 08. WHEEL OBJECTS
+# ============================================================
+
+wheel_names = [
+
+    "WHEEL_FL_MASTER",
+    "WHEEL_FR_MASTER",
+    "WHEEL_RL_MASTER",
+    "WHEEL_RR_MASTER"
+
+]
+
+
+wheels = []
+
+
+for name in wheel_names:
+
+    wheel = bpy.data.objects.get(
+        name
+    )
+
+    if wheel:
+
+        wheels.append(
+            wheel
+        )
+
+
+steer_fl = bpy.data.objects.get(
+    "STEER_FL_MASTER"
+)
+
+
+steer_fr = bpy.data.objects.get(
+    "STEER_FR_MASTER"
+)
+
+
+# ============================================================
+# 09. LIFT DOORS
+# ============================================================
+
+B1_DOOR_NAMES = [
+
+    "B1_Lift_Door_-1",
+
+    "B1_Lift_Door_1"
+
+]
+
+
+TARGET_DOOR_NAMES = [
+
+    TARGET_LEVEL + "_Lift_Door_-1",
+
+    TARGET_LEVEL + "_Lift_Door_1"
+
+]
+
+
+def get_objects(
+    names
+):
+
+    result = []
+
+
+    for name in names:
+
+        obj = bpy.data.objects.get(
+            name
+        )
+
+
+        if obj:
+
+            result.append(
+                obj
+            )
+
+
+    return result
+
+
+b1_doors = get_objects(
+    B1_DOOR_NAMES
+)
+
+
+target_doors = get_objects(
+    TARGET_DOOR_NAMES
+)
+
+
+if len(b1_doors) != 2:
+
+    raise Exception(
+        "Không tìm đủ B1 lift doors."
+    )
+
+
+if len(target_doors) != 2:
+
+    raise Exception(
+        "Không tìm thấy lift doors tại "
+        + TARGET_LEVEL
+    )
+
+
+# ============================================================
+# 10. LIFT CAR
+# ============================================================
+
+lift_parts = [
+
+    obj
+
+    for obj in bpy.data.objects
+
+    if obj.name.startswith(
+        "Lift Car"
+    )
+
+]
+
+
+if len(lift_parts) == 0:
+
+    raise Exception(
+        "Không tìm thấy Lift Car."
+    )
+
+
+# ============================================================
+# 11. DELETE PREVIOUS CODE 4
+# ============================================================
+
+def delete_collection_recursive(
+    collection
+):
+
+    if collection is None:
+
+        return
+
+
+    for child in list(
+        collection.children
+    ):
+
+        delete_collection_recursive(
+            child
+        )
+
+
+    for obj in list(
+        collection.objects
+    ):
+
+        bpy.data.objects.remove(
+            obj,
+            do_unlink=True
+        )
+
+
+    bpy.data.collections.remove(
+        collection
+    )
+
+
+old_collection = bpy.data.collections.get(
+    COLLECTION_NAME
+)
+
+
+if old_collection:
+
+    delete_collection_recursive(
+        old_collection
+    )
+
+
+# ============================================================
+# 12. DELETE OLD CODE 4 MARKERS
+# ============================================================
+
+for marker in list(
+    scene.timeline_markers
+):
+
+    if marker.name.startswith(
+        "CODE4_"
+    ):
+
+        scene.timeline_markers.remove(
+            marker
+        )
+
+
+# ============================================================
+# 13. REMOVE CODE 4 KEYS FROM TRUCK
+#
+# Keep Code 3 intact.
+# ============================================================
+
+def remove_keys_after(
+    obj,
+    frame
+):
+
+    if obj is None:
+
+        return
+
+
+    if obj.animation_data is None:
+
+        return
+
+
+    action = (
+        obj.animation_data.action
+    )
+
+
+    if action is None:
+
+        return
+
+
+    try:
+
+        curves = action.fcurves
+
+    except:
+
+        return
+
+
+    for curve in curves:
+
+        remove_points = [
+
+            key
+
+            for key
+            in curve.keyframe_points
+
+            if key.co.x >= frame
+
+        ]
+
+
+        for key in remove_points:
+
+            curve.keyframe_points.remove(
+                key
+            )
+
+
+remove_keys_after(
+    truck,
+    F_START
+)
+
+
+for wheel in wheels:
+
+    remove_keys_after(
+        wheel,
+        F_START
+    )
+
+
+remove_keys_after(
+    steer_fl,
+    F_START
+)
+
+
+remove_keys_after(
+    steer_fr,
+    F_START
+)
+
+
+# ============================================================
+# 14. CREATE CODE4 COLLECTION
+# ============================================================
+
+COL = bpy.data.collections.new(
+    COLLECTION_NAME
+)
+
+
+scene.collection.children.link(
+    COL
+)
+
+
+# ============================================================
+# 15. MATERIAL HELPER
+# ============================================================
+
+def make_material(
+    name,
+    colour,
+    metallic=0.0,
+    roughness=0.5
+):
+
+    mat = bpy.data.materials.get(
+        name
+    )
+
+
+    if mat is None:
+
+        mat = bpy.data.materials.new(
+            name=name
+        )
+
+
+    mat.use_nodes = True
+
+
+    bsdf = mat.node_tree.nodes.get(
+        "Principled BSDF"
+    )
+
+
+    if bsdf:
+
+        if "Base Color" in bsdf.inputs:
+
+            bsdf.inputs[
+                "Base Color"
+            ].default_value = (
+
+                colour[0],
+                colour[1],
+                colour[2],
+                1.0
+
+            )
+
+
+        if "Metallic" in bsdf.inputs:
+
+            bsdf.inputs[
+                "Metallic"
+            ].default_value = (
+                metallic
+            )
+
+
+        if "Roughness" in bsdf.inputs:
+
+            bsdf.inputs[
+                "Roughness"
+            ].default_value = (
+                roughness
+            )
+
+
+    return mat
+
+
+# ============================================================
+# 16. MATERIALS
+# ============================================================
+
+MAT_GALV = make_material(
+    "Code4 Trolley Galv",
+    (0.42, 0.45, 0.47),
+    0.82,
+    0.30
+)
+
+
+MAT_RUBBER = make_material(
+    "Code4 Rubber",
+    (0.012, 0.014, 0.016),
+    0.0,
+    0.80
+)
+
+
+MAT_HIVIS = make_material(
+    "Code4 HiVis Orange",
+    (1.00, 0.24, 0.01),
+    0.0,
+    0.40
+)
+
+
+MAT_REFLECTIVE = make_material(
+    "Code4 Reflective",
+    (0.92, 0.92, 0.62),
+    0.10,
+    0.25
+)
+
+
+MAT_PANTS = make_material(
+    "Code4 Pants",
+    (0.025, 0.030, 0.040),
+    0.0,
+    0.80
+)
+
+
+MAT_SKIN = make_material(
+    "Code4 Skin",
+    (0.46, 0.24, 0.15),
+    0.0,
+    0.50
+)
+
+
+MAT_HELMET = make_material(
+    "Code4 Helmet",
+    (0.95, 0.70, 0.01),
+    0.0,
+    0.30
+)
+
+
+MAT_BOOT = make_material(
+    "Code4 Safety Boot",
+    (0.018, 0.016, 0.014),
+    0.0,
+    0.78
+)
+
+
+MAT_TIMBER = make_material(
+    "Code4 Timber Packer",
+    (0.38, 0.19, 0.05),
+    0.0,
+    0.78
+)
+
+
+# ============================================================
+# 17. MOVE OBJECT TO COLLECTION
+# ============================================================
+
+def move_to_col(
+    obj
+):
+
+    for collection in list(
+        obj.users_collection
+    ):
+
+        collection.objects.unlink(
+            obj
+        )
+
+
+    COL.objects.link(
+        obj
+    )
+
+
+# ============================================================
+# 18. EMPTY
+# ============================================================
+
+def empty(
+    name,
+    location=(0, 0, 0),
+    parent=None,
+    size=0.20
+):
+
+    obj = bpy.data.objects.new(
+        name,
+        None
+    )
+
+
+    COL.objects.link(
+        obj
+    )
+
+
+    obj.location = location
+
+
+    if parent:
+
+        obj.parent = parent
+
+
+    obj.empty_display_type = (
+        'ARROWS'
+    )
+
+
+    obj.empty_display_size = (
+        size
+    )
+
+
+    return obj
+
+
+# ============================================================
+# 19. BOX
+# ============================================================
+
+def box(
+    name,
+    dimensions,
+    location,
+    material,
+    parent=None
+):
+
+    bpy.ops.mesh.primitive_cube_add(
+        location=(0, 0, 0)
+    )
+
+
+    obj = bpy.context.object
+
+
+    obj.name = name
+
+
+    obj.dimensions = dimensions
+
+
+    bpy.ops.object.transform_apply(
+        location=False,
+        rotation=False,
+        scale=True
+    )
+
+
+    obj.location = location
+
+
+    if parent:
+
+        obj.parent = parent
+
+
+    obj.data.materials.append(
+        material
+    )
+
+
+    move_to_col(
+        obj
+    )
+
+
+    return obj
+
+
+# ============================================================
+# 20. CYLINDER
+# ============================================================
+
+def cylinder(
+    name,
+    radius,
+    depth,
+    location,
+    material,
+    parent=None,
+    rotation=(0, 0, 0)
+):
+
+    bpy.ops.mesh.primitive_cylinder_add(
+        vertices=24,
+        radius=radius,
+        depth=depth,
+        location=(0, 0, 0)
+    )
+
+
+    obj = bpy.context.object
+
+
+    obj.name = name
+
+
+    obj.location = location
+
+
+    obj.rotation_euler = rotation
+
+
+    if parent:
+
+        obj.parent = parent
+
+
+    obj.data.materials.append(
+        material
+    )
+
+
+    move_to_col(
+        obj
+    )
+
+
+    return obj
+
+
+# ============================================================
+# 21. SPHERE
+# ============================================================
+
+def sphere(
+    name,
+    radius,
+    location,
+    material,
+    parent=None
+):
+
+    bpy.ops.mesh.primitive_ico_sphere_add(
+        subdivisions=2,
+        radius=radius,
+        location=(0, 0, 0)
+    )
+
+
+    obj = bpy.context.object
+
+
+    obj.name = name
+
+
+    obj.location = location
+
+
+    if parent:
+
+        obj.parent = parent
+
+
+    obj.data.materials.append(
+        material
+    )
+
+
+    move_to_col(
+        obj
+    )
+
+
+    return obj
+
+
+# ============================================================
+# 22. KEYFRAME HELPERS
+# ============================================================
+
+def key_location(
+    obj,
+    frame,
+    location
+):
+
+    obj.location = Vector(
+        location
+    )
+
+
+    obj.keyframe_insert(
+        data_path="location",
+        frame=frame
+    )
+
+
+def key_rotation_z(
+    obj,
+    frame,
+    yaw
+):
+
+    obj.rotation_mode = (
+        'XYZ'
+    )
+
+
+    obj.rotation_euler.z = (
+        yaw
+    )
+
+
+    obj.keyframe_insert(
+        data_path="rotation_euler",
+        frame=frame
+    )
+
+
+def key_rotation_quat(
+    obj,
+    frame,
+    rotation
+):
+
+    obj.rotation_mode = (
+        'QUATERNION'
+    )
+
+
+    obj.rotation_quaternion = (
+        rotation
+    )
+
+
+    obj.keyframe_insert(
+        data_path="rotation_quaternion",
+        frame=frame
+    )
+
+
+def key_scale(
+    obj,
+    frame,
+    scale
+):
+
+    obj.scale = Vector(
+        scale
+    )
+
+
+    obj.keyframe_insert(
+        data_path="scale",
+        frame=frame
+    )
+
+
+def key_visibility(
+    obj,
+    frame,
+    visible
+):
+
+    obj.hide_viewport = (
+        not visible
+    )
+
+
+    obj.hide_render = (
+        not visible
+    )
+
+
+    obj.keyframe_insert(
+        data_path="hide_viewport",
+        frame=frame
+    )
+
+
+    obj.keyframe_insert(
+        data_path="hide_render",
+        frame=frame
+    )
+
+
+# ============================================================
+# 23. INTERPOLATION
+# ============================================================
+
+def make_linear(
+    obj
+):
+
+    if obj is None:
+
+        return
+
+
+    if obj.animation_data is None:
+
+        return
+
+
+    action = (
+        obj.animation_data.action
+    )
+
+
+    if action is None:
+
+        return
+
+
+    try:
+
+        curves = action.fcurves
+
+    except:
+
+        return
+
+
+    for curve in curves:
+
+        for key in curve.keyframe_points:
+
+            key.interpolation = (
+                'LINEAR'
+            )
+
+
+def make_scale_smooth(
+    obj
+):
+
+    if obj.animation_data is None:
+
+        return
+
+
+    action = (
+        obj.animation_data.action
+    )
+
+
+    if action is None:
+
+        return
+
+
+    try:
+
+        curves = action.fcurves
+
+    except:
+
+        return
+
+
+    for curve in curves:
+
+        if curve.data_path != "scale":
+
+            continue
+
+
+        for key in curve.keyframe_points:
+
+            key.interpolation = (
+                'BEZIER'
+            )
+
+
+            try:
+
+                key.handle_left_type = (
+                    'AUTO_CLAMPED'
+                )
+
+                key.handle_right_type = (
+                    'AUTO_CLAMPED'
+                )
+
+            except:
+
+                pass
+
+
+# ============================================================
+# 24. GET DESCENDANTS
+# ============================================================
+
+def descendants(
+    parent
+):
+
+    result = []
+
+
+    def recurse(
+        obj
+    ):
+
+        for child in obj.children:
+
+            result.append(
+                child
+            )
+
+
+            recurse(
+                child
+            )
+
+
+    recurse(
+        parent
+    )
+
+
+    return result
+
+
+# ============================================================
+# 25. RESET ORIGINAL TRUCK STAIR VISIBILITY
+# ============================================================
+
+source_children = descendants(
+    source_cargo
+)
+
+
+for obj in source_children:
+
+    obj.hide_viewport = False
+
+    obj.hide_render = False
+
+
+    if obj.animation_data is None:
+
+        continue
+
+
+    action = (
+        obj.animation_data.action
+    )
+
+
+    if action is None:
+
+        continue
+
+
+    try:
+
+        curves = list(
+            action.fcurves
+        )
+
+    except:
+
+        curves = []
+
+
+    for curve in curves:
+
+        if curve.data_path in [
+
+            "hide_viewport",
+            "hide_render"
+
+        ]:
+
+            action.fcurves.remove(
+                curve
+            )
+
+
+# ============================================================
+# 26. GET CODE3 FINAL TRUCK TRANSFORM
+# ============================================================
+
+scene.frame_set(
+    CODE3_END_FRAME
+)
+
+
+bpy.context.view_layer.update()
+
+
+CODE3_TRUCK_POS = (
+    truck.matrix_world.translation.copy()
+)
+
+
+CODE3_TRUCK_ROT = (
+    truck.matrix_world.to_quaternion().copy()
+)
+
+
+TRUCK_FORWARD = (
+
+    CODE3_TRUCK_ROT
+
+    @ Vector(
+        (
+            1,
+            0,
+            0
+        )
+    )
+
+)
+
+
+TRUCK_FORWARD.z = 0
+
+
+if TRUCK_FORWARD.length < 0.001:
+
+    TRUCK_FORWARD = Vector(
+        (
+            0,
+            1,
+            0
+        )
+    )
+
+
+TRUCK_FORWARD.normalize()
+
+
+TRUCK_SIDE = (
+
+    CODE3_TRUCK_ROT
+
+    @ Vector(
+        (
+            0,
+            1,
+            0
+        )
+    )
+
+)
+
+
+TRUCK_SIDE.z = 0
+
+
+if TRUCK_SIDE.length < 0.001:
+
+    TRUCK_SIDE = Vector(
+        (
+            1,
+            0,
+            0
+        )
+    )
+
+
+TRUCK_SIDE.normalize()
+
+
+WORLD_UP = Vector(
+    (
+        0,
+        0,
+        1
+    )
+)
+
+
+# ============================================================
+# 27. LIFT DATA
+# ============================================================
+
+def world_center(
+    objects
+):
+
+    total = Vector(
+        (
+            0,
+            0,
+            0
+        )
+    )
+
+
+    for obj in objects:
+
+        total += (
+            obj.matrix_world.translation.copy()
+        )
+
+
+    return (
+        total
+        / len(objects)
+    )
+
+
+B1_DOOR_CENTER = world_center(
+    b1_doors
+)
+
+
+TARGET_DOOR_CENTER = world_center(
+    target_doors
+)
+
+
+def door_floor_z(
+    doors
+):
+
+    result = []
+
+
+    for door in doors:
+
+        result.append(
+
+            door.matrix_world.translation.z
+
+            - door.dimensions.z / 2
+
+        )
+
+
+    return (
+        sum(result)
+        / len(result)
+    )
+
+
+B1_Z = door_floor_z(
+    b1_doors
+)
+
+
+TARGET_Z = door_floor_z(
+    target_doors
+)
+
+
+LIFT_TRAVEL = (
+    TARGET_Z
+    - B1_Z
+)
+
+
+# ============================================================
+# 28. FIND LIFT FLOOR
+# ============================================================
+
+lift_floor = None
+
+
+for obj in lift_parts:
+
+    if "Floor" in obj.name:
+
+        lift_floor = obj
+        break
+
+
+if lift_floor is None:
+
+    lift_floor = (
+        lift_parts[0]
+    )
+
+
+LIFT_CENTER = (
+    lift_floor.matrix_world.translation.copy()
+)
+
+
+# ============================================================
+# 29. MOVE TRUCK AWAY FROM LIFT
+# ============================================================
+
+away = (
+
+    CODE3_TRUCK_POS
+
+    - B1_DOOR_CENTER
+
+)
+
+
+away.z = 0
+
+
+if away.length < 0.50:
+
+    away = (
+        -TRUCK_FORWARD
+    )
+
+
+away.normalize()
+
+
+TRUCK_REVERSE_DISTANCE = 6.00
+
+
+TRUCK_PARK_POS = (
+
+    CODE3_TRUCK_POS
+
+    + away
+    * TRUCK_REVERSE_DISTANCE
+
+)
+
+
+TRUCK_PARK_POS.z = (
+    B1_Z
+)
+
+
+truck.rotation_mode = (
+    'QUATERNION'
+)
+
+
+truck.location = (
+    CODE3_TRUCK_POS
+)
+
+
+truck.rotation_quaternion = (
+    CODE3_TRUCK_ROT
+)
+
+
+truck.keyframe_insert(
+    data_path="location",
+    frame=F_TRUCK_MOVE_START
+)
+
+
+truck.keyframe_insert(
+    data_path="rotation_quaternion",
+    frame=F_TRUCK_MOVE_START
+)
+
+
+truck.location = (
+    TRUCK_PARK_POS
+)
+
+
+truck.rotation_quaternion = (
+    CODE3_TRUCK_ROT
+)
+
+
+truck.keyframe_insert(
+    data_path="location",
+    frame=F_TRUCK_PARK
+)
+
+
+truck.keyframe_insert(
+    data_path="rotation_quaternion",
+    frame=F_TRUCK_PARK
+)
+
+
+make_linear(
+    truck
+)
+
+
+# ============================================================
+# 30. WHEELS DURING TRUCK REVERSE
+# ============================================================
+
+scene.frame_set(
+    CODE3_END_FRAME
+)
+
+
+reverse_spin = (
+
+    TRUCK_REVERSE_DISTANCE
+
+    / WHEEL_RADIUS
+
+)
+
+
+for wheel in wheels:
+
+    wheel.rotation_mode = (
+        'XYZ'
+    )
+
+
+    initial_spin = (
+        wheel.rotation_euler.y
+    )
+
+
+    wheel.rotation_euler.y = (
+        initial_spin
+    )
+
+
+    wheel.keyframe_insert(
+        data_path="rotation_euler",
+        frame=F_TRUCK_MOVE_START
+    )
+
+
+    wheel.rotation_euler.y = (
+
+        initial_spin
+
+        - reverse_spin
+
+    )
+
+
+    wheel.keyframe_insert(
+        data_path="rotation_euler",
+        frame=F_TRUCK_PARK
+    )
+
+
+    make_linear(
+        wheel
+    )
+
+
+# ============================================================
+# 31. GET PARKED TRUCK AXES
+# ============================================================
+
+scene.frame_set(
+    F_TRUCK_PARK
+)
+
+
+bpy.context.view_layer.update()
+
+
+PARK_ROT = (
+    truck.matrix_world.to_quaternion()
+)
+
+
+FORWARD = (
+
+    PARK_ROT
+
+    @ Vector(
+        (
+            1,
+            0,
+            0
+        )
+    )
+
+)
+
+
+FORWARD.z = 0
+
+
+FORWARD.normalize()
+
+
+SIDE = (
+
+    PARK_ROT
+
+    @ Vector(
+        (
+            0,
+            1,
+            0
+        )
+    )
+
+)
+
+
+SIDE.z = 0
+
+
+SIDE.normalize()
+
+
+# ============================================================
+# 32. CHOOSE CORRECT UNLOADING SIDE
+# ============================================================
+
+to_lift = (
+
+    B1_DOOR_CENTER
+
+    - TRUCK_PARK_POS
+
+)
+
+
+to_lift.z = 0
+
+
+if to_lift.dot(
+    SIDE
+) >= 0:
+
+    SIDE_SIGN = 1.0
+
+else:
+
+    SIDE_SIGN = -1.0
+
+
+UNLOAD_SIDE = (
+    SIDE
+    * SIDE_SIGN
+)
+
+
+# ============================================================
+# 33. SAFE CLEARANCES
+# ============================================================
+
+SIDE_SAFE = (
+
+    HALF_TRUCK_WIDTH
+
+    + 1.75
+
+)
+
+
+END_SAFE = (
+
+    HALF_TRUCK_LENGTH
+
+    + 1.80
+
+)
+
+
+UNLOAD_POS = (
+
+    TRUCK_PARK_POS
+
+    - FORWARD * 0.70
+
+    + UNLOAD_SIDE
+    * SIDE_SAFE
+
+)
+
+
+UNLOAD_POS.z = (
+    B1_Z
+)
+
+
+SIDE_CLEAR_POS = (
+
+    UNLOAD_POS
+
+    + UNLOAD_SIDE
+    * 1.70
+
+)
+
+
+# ============================================================
+# 34. SAFE CORNER
+# ============================================================
+
+forward_projection = (
+
+    (
+        B1_DOOR_CENTER
+        - TRUCK_PARK_POS
+    )
+
+    .dot(
+        FORWARD
+    )
+
+)
+
+
+if forward_projection >= 0:
+
+    CORNER_CLEAR_POS = (
+
+        TRUCK_PARK_POS
+
+        + FORWARD * END_SAFE
+
+        + UNLOAD_SIDE
+        * (
+            SIDE_SAFE + 1.00
+        )
+
+    )
+
+else:
+
+    CORNER_CLEAR_POS = (
+
+        TRUCK_PARK_POS
+
+        - FORWARD * END_SAFE
+
+        + UNLOAD_SIDE
+        * (
+            SIDE_SAFE + 1.00
+        )
+
+    )
+
+
+CORNER_CLEAR_POS.z = (
+    B1_Z
+)
+
+
+# ============================================================
+# 35. LIFT POSITIONS
+# ============================================================
+
+# Building V4:
+# lift front faces toward -Y.
+
+LIFT_FRONT_B1 = Vector(
+    (
+        B1_DOOR_CENTER.x,
+
+        B1_DOOR_CENTER.y - 1.75,
+
+        B1_Z
+    )
+)
+
+
+LIFT_INSIDE_B1 = Vector(
+    (
+        LIFT_CENTER.x,
+
+        LIFT_CENTER.y - 0.05,
+
+        B1_Z
+    )
+)
+
+
+LIFT_INSIDE_TARGET = Vector(
+    (
+        LIFT_CENTER.x,
+
+        LIFT_CENTER.y - 0.05,
+
+        TARGET_Z
+    )
+)
+
+
+LIFT_FRONT_TARGET = Vector(
+    (
+        TARGET_DOOR_CENTER.x,
+
+        TARGET_DOOR_CENTER.y - 1.75,
+
+        TARGET_Z
+    )
+)
+
+
+UPPER_CLEAR = Vector(
+    (
+        LIFT_FRONT_TARGET.x,
+
+        LIFT_FRONT_TARGET.y - 2.50,
+
+        TARGET_Z
+    )
+)
+
+
+# ============================================================
+# 36. UPPER LEVEL ROUTE
+# ============================================================
+
+STORAGE_ROUTE = Vector(
+    (
+        0.5,
+        -2.5,
+        TARGET_Z
+    )
+)
+
+
+STORAGE_POS = Vector(
+    (
+        3.3,
+        -2.5,
+        TARGET_Z
+    )
+)
+
+
+FINAL_STAIR_POS = Vector(
+    (
+        5.2,
+        -2.5,
+        TARGET_Z + 0.16
+    )
+)
+
+
+# ============================================================
+# 37. TROLLEY START
+# ============================================================
+
+TROLLEY_START_POS = (
+
+    TRUCK_PARK_POS
+
+    - FORWARD
+    * (
+        HALF_TRUCK_LENGTH
+        + 2.50
+    )
+
+    + UNLOAD_SIDE
+    * SIDE_SAFE
+
+)
+
+
+TROLLEY_START_POS.z = (
+    B1_Z
+)
+
+
+# ============================================================
+# 38. CREATE TROLLEY
+#
+# 1.70m trolley fits inside 2.05m lift.
+# ============================================================
+
+TROLLEY = empty(
+    "CODE4_TROLLEY_MASTER"
+)
+
+
+box(
+    "Trolley Deck",
+    (
+        1.70,
+        0.88,
+        0.14
+    ),
+    (
+        0,
+        0,
+        0.46
+    ),
+    MAT_GALV,
+    TROLLEY
+)
+
+
+box(
+    "Trolley Lower Frame",
+    (
+        1.48,
+        0.68,
+        0.12
+    ),
+    (
+        0,
+        0,
+        0.24
+    ),
+    MAT_GALV,
+    TROLLEY
+)
+
+
+for x in [
+    -0.62,
+    0.62
+]:
+
+    for y in [
+        -0.33,
+        0.33
+    ]:
+
+        cylinder(
+            "Trolley Wheel",
+            0.11,
+            0.08,
+            (
+                x,
+                y,
+                0.11
+            ),
+            MAT_RUBBER,
+            TROLLEY,
+            rotation=(
+                math.radians(90),
+                0,
+                0
+            )
+        )
+
+
+for y in [
+    -0.34,
+    0.34
+]:
+
+    box(
+        "Trolley Handle Vertical",
+        (
+            0.07,
+            0.07,
+            0.92
+        ),
+        (
+            -0.72,
+            y,
+            0.88
+        ),
+        MAT_GALV,
+        TROLLEY
+    )
+
+
+box(
+    "Trolley Handle Top",
+    (
+        0.07,
+        0.76,
+        0.07
+    ),
+    (
+        -0.72,
+        0,
+        1.31
+    ),
+    MAT_GALV,
+    TROLLEY
+)
+
+
+# ============================================================
+# 39. DUPLICATE THE EXACT STAIR FROM TRUCK
+#
+# No alternative steel package.
+#
+# Everything except:
+# - timber dunnage
+# - ratchet straps
+#
+# is copied directly from CARGO_STAIR_MASTER.
+# ============================================================
+
+scene.frame_set(
+    F_UNLOAD_START
+)
+
+
+bpy.context.view_layer.update()
+
+
+SOURCE_CARGO_WORLD = (
+    source_cargo.matrix_world.copy()
+)
+
+
+SOURCE_INV = (
+    SOURCE_CARGO_WORLD.inverted()
+)
+
+
+EXACT_STAIR = empty(
+    "CODE4_EXACT_STAIR_MASTER"
+)
+
+
+duplicated_meshes = []
+
+
+EXCLUDE_WORDS = [
+
+    "dunnage",
+
+    "ratchet strap"
+
+]
+
+
+for source_obj in descendants(
+    source_cargo
+):
+
+    if source_obj.type != 'MESH':
+
+        continue
+
+
+    lower_name = (
+        source_obj.name.lower()
+    )
+
+
+    skip = False
+
+
+    for word in EXCLUDE_WORDS:
+
+        if word in lower_name:
+
+            skip = True
+            break
+
+
+    if skip:
+
+        continue
+
+
+    relative_matrix = (
+
+        SOURCE_INV
+
+        @ source_obj.matrix_world
+
+    )
+
+
+    duplicate = (
+        source_obj.copy()
+    )
+
+
+    if source_obj.data:
+
+        duplicate.data = (
+            source_obj.data.copy()
+        )
+
+
+    duplicate.name = (
+
+        "CODE4_EXACT_"
+
+        + source_obj.name
+
+    )
+
+
+    COL.objects.link(
+        duplicate
+    )
+
+
+    duplicate.parent = (
+        EXACT_STAIR
+    )
+
+
+    duplicate.matrix_parent_inverse = (
+        Matrix.Identity(4)
+    )
+
+
+    duplicate.matrix_basis = (
+        relative_matrix
+    )
+
+
+    duplicated_meshes.append(
+        duplicate
+    )
+
+
+# ============================================================
+# 40. EXACT STAIR INITIAL TRANSFORM
+# ============================================================
+
+INITIAL_STAIR_LOCATION = (
+    SOURCE_CARGO_WORLD.translation.copy()
+)
+
+
+INITIAL_STAIR_ROT = (
+    SOURCE_CARGO_WORLD.to_quaternion()
+)
+
+
+INITIAL_STAIR_SCALE = (
+    SOURCE_CARGO_WORLD.to_scale()
+)
+
+
+EXACT_STAIR.rotation_mode = (
+    'QUATERNION'
+)
+
+
+EXACT_STAIR.location = (
+    INITIAL_STAIR_LOCATION
+)
+
+
+EXACT_STAIR.rotation_quaternion = (
+    INITIAL_STAIR_ROT
+)
+
+
+EXACT_STAIR.scale = (
+    INITIAL_STAIR_SCALE
+)
+
+
+# ============================================================
+# 41. ORIGINAL STAIR VISIBILITY SWITCH
+# ============================================================
+
+for duplicate in duplicated_meshes:
+
+    key_visibility(
+        duplicate,
+        F_UNLOAD_START - 1,
+        False
+    )
+
+
+    key_visibility(
+        duplicate,
+        F_UNLOAD_START,
+        True
+    )
+
+
+# Hide original steel,
+# but keep timber dunnage on truck.
+
+for source_obj in source_children:
+
+    if source_obj.type != 'MESH':
+
+        continue
+
+
+    name_lower = (
+        source_obj.name.lower()
+    )
+
+
+    # timber stays on truck
+
+    if "dunnage" in name_lower:
+
+        continue
+
+
+    key_visibility(
+        source_obj,
+        F_UNLOAD_START - 1,
+        True
+    )
+
+
+    key_visibility(
+        source_obj,
+        F_UNLOAD_START,
+        False
+    )
+
+
+# ============================================================
+# 42. EXACT STAIR UNLOADING
+#
+# FULL SIZE.
+#
+# truck tray
+#    ↓
+# lift vertically
+#    ↓
+# move horizontally out
+#    ↓
+# lower onto trolley
+# ============================================================
+
+STAIR_TRAY_POS = (
+    INITIAL_STAIR_LOCATION.copy()
+)
+
+
+STAIR_UP_POS = (
+
+    STAIR_TRAY_POS
+
+    + WORLD_UP * 0.45
+
+)
+
+
+STAIR_SIDE_POS = (
+
+    UNLOAD_POS
+
+    + WORLD_UP * 1.25
+
+)
+
+
+STAIR_TROLLEY_POS = (
+
+    UNLOAD_POS
+
+    + WORLD_UP * 0.64
+
+)
+
+
+key_location(
+    EXACT_STAIR,
+    F_UNLOAD_START,
+    STAIR_TRAY_POS
+)
+
+
+key_rotation_quat(
+    EXACT_STAIR,
+    F_UNLOAD_START,
+    INITIAL_STAIR_ROT
+)
+
+
+key_location(
+    EXACT_STAIR,
+    F_STAIR_LIFT_CLEAR,
+    STAIR_UP_POS
+)
+
+
+key_rotation_quat(
+    EXACT_STAIR,
+    F_STAIR_LIFT_CLEAR,
+    INITIAL_STAIR_ROT
+)
+
+
+key_location(
+    EXACT_STAIR,
+    F_STAIR_MOVE_SIDE,
+    STAIR_SIDE_POS
+)
+
+
+key_rotation_quat(
+    EXACT_STAIR,
+    F_STAIR_MOVE_SIDE,
+    INITIAL_STAIR_ROT
+)
+
+
+key_location(
+    EXACT_STAIR,
+    F_STAIR_ON_TROLLEY,
+    STAIR_TROLLEY_POS
+)
+
+
+key_rotation_quat(
+    EXACT_STAIR,
+    F_STAIR_ON_TROLLEY,
+    INITIAL_STAIR_ROT
+)
+
+
+# ============================================================
+# 43. ROUTE HELPERS
+# ============================================================
+
+def route_yaw(
+    current,
+    next_position
+):
+
+    direction = (
+
+        Vector(
+            next_position
+        )
+
+        - Vector(
+            current
+        )
+
+    )
+
+
+    direction.z = 0
+
+
+    if direction.length < 0.01:
+
+        return 0.0
+
+
+    return math.atan2(
+        direction.y,
+        direction.x
+    )
+
+
+def quaternion_from_yaw(
+    yaw
+):
+
+    direction = Vector(
+        (
+            math.cos(yaw),
+            math.sin(yaw),
+            0
+        )
+    )
+
+
+    return direction.to_track_quat(
+        'X',
+        'Z'
+    )
+
+
+def animate_route(
+    obj,
+    route
+):
+
+    previous_yaw = 0.0
+
+
+    for i, (
+        frame,
+        position
+    ) in enumerate(
+        route
+    ):
+
+        if i < (
+            len(route) - 1
+        ):
+
+            yaw = route_yaw(
+                position,
+                route[
+                    i + 1
+                ][1]
+            )
+
+
+            previous_yaw = yaw
+
+
+        else:
+
+            yaw = (
+                previous_yaw
+            )
+
+
+        key_location(
+            obj,
+            frame,
+            position
+        )
+
+
+        key_rotation_z(
+            obj,
+            frame,
+            yaw
+        )
+
+
+    make_linear(
+        obj
+    )
+
+
+# ============================================================
+# 44. TROLLEY ROUTE
+# ============================================================
+
+TROLLEY_ROUTE = [
+
+    (
+        F_TROLLEY_START,
+        TROLLEY_START_POS
+    ),
+
+    (
+        F_TROLLEY_AT_TRUCK,
+        UNLOAD_POS
+    ),
+
+    (
+        F_STAIR_ON_TROLLEY,
+        UNLOAD_POS
+    ),
+
+    (
+        F_SIDE_CLEAR,
+        SIDE_CLEAR_POS
+    ),
+
+    (
+        F_CORNER_CLEAR,
+        CORNER_CLEAR_POS
+    ),
+
+    (
+        F_LIFT_FRONT,
+        LIFT_FRONT_B1
+    ),
+
+    (
+        F_ENTER_LIFT,
+        LIFT_INSIDE_B1
+    ),
+
+    (
+        F_LIFT_UP_START,
+        LIFT_INSIDE_B1
+    ),
+
+    (
+        F_LIFT_UP_END,
+        LIFT_INSIDE_TARGET
+    ),
+
+    (
+        F_EXIT_LIFT,
+        LIFT_FRONT_TARGET
+    ),
+
+    (
+        F_UPPER_CLEAR,
+        UPPER_CLEAR
+    ),
+
+    (
+        F_STORAGE_ROUTE,
+        STORAGE_ROUTE
+    ),
+
+    (
+        F_STORAGE_ARRIVE,
+        STORAGE_POS
+    ),
+
+    (
+        F_PLACE_END,
+        STORAGE_POS
+    ),
+
+    # --------------------------------------------------------
+    # Empty trolley returns
+    # --------------------------------------------------------
+
+    (
+        F_RETURN_START,
+
+        STORAGE_POS
+
+        + Vector(
+            (
+                -1.70,
+                1.40,
+                0
+            )
+        )
+    ),
+
+    (
+        F_RETURN_LIFT_FRONT,
+        LIFT_FRONT_TARGET
+    ),
+
+    (
+        F_RETURN_ENTER_LIFT,
+        LIFT_INSIDE_TARGET
+    ),
+
+    (
+        F_LIFT_DOWN_START,
+        LIFT_INSIDE_TARGET
+    ),
+
+    (
+        F_LIFT_DOWN_END,
+        LIFT_INSIDE_B1
+    ),
+
+    (
+        F_EXIT_B1,
+        LIFT_FRONT_B1
+    ),
+
+    (
+        F_RETURN_CORNER,
+        CORNER_CLEAR_POS
+    ),
+
+    (
+        F_RETURN_SIDE,
+        SIDE_CLEAR_POS
+    ),
+
+    (
+        F_RETURN_TRUCK,
+        UNLOAD_POS
+    ),
+
+    (
+        F_END,
+        UNLOAD_POS
+    )
+
+]
+
+
+animate_route(
+    TROLLEY,
+    TROLLEY_ROUTE
+)
+
+
+# ============================================================
+# 45. EXACT STAIR FOLLOWS TROLLEY
+#
+# Only until it reaches staging area.
+# ============================================================
+
+last_yaw = 0.0
+
+
+for index, (
+    frame,
+    position
+) in enumerate(
+    TROLLEY_ROUTE
+):
+
+    if frame < F_LEAVE_TRUCK:
+
+        continue
+
+
+    if frame > F_STORAGE_ARRIVE:
+
+        break
+
+
+    if index < (
+        len(TROLLEY_ROUTE) - 1
+    ):
+
+        yaw = route_yaw(
+            position,
+            TROLLEY_ROUTE[
+                index + 1
+            ][1]
+        )
+
+
+        last_yaw = yaw
+
+
+    else:
+
+        yaw = (
+            last_yaw
+        )
+
+
+    stair_position = (
+
+        Vector(
+            position
+        )
+
+        + WORLD_UP * 0.64
+
+    )
+
+
+    key_location(
+        EXACT_STAIR,
+        frame,
+        stair_position
+    )
+
+
+    key_rotation_quat(
+        EXACT_STAIR,
+        frame,
+        quaternion_from_yaw(
+            yaw
+        )
+    )
+
+
+# ============================================================
+# 46. SCALE STAIR FOR LIFT
+#
+# OUTSIDE = 100%
+#
+# INSIDE = 36%
+#
+# AFTER EXIT = gradually back to 100%
+# ============================================================
+
+NORMAL_STAIR_SCALE = Vector(
+    (
+        INITIAL_STAIR_SCALE.x,
+        INITIAL_STAIR_SCALE.y,
+        INITIAL_STAIR_SCALE.z
+    )
+)
+
+
+REDUCED_STAIR_SCALE = Vector(
+    (
+        INITIAL_STAIR_SCALE.x
+        * STAIR_LIFT_SCALE,
+
+        INITIAL_STAIR_SCALE.y
+        * STAIR_LIFT_SCALE,
+
+        INITIAL_STAIR_SCALE.z
+        * STAIR_LIFT_SCALE
+    )
+)
+
+
+# Full size during unloading and transport.
+
+key_scale(
+    EXACT_STAIR,
+    F_UNLOAD_START,
+    NORMAL_STAIR_SCALE
+)
+
+
+key_scale(
+    EXACT_STAIR,
+    F_SCALE_DOWN_START,
+    NORMAL_STAIR_SCALE
+)
+
+
+# Shrink BEFORE crossing lift doors.
+
+key_scale(
+    EXACT_STAIR,
+    F_SCALE_DOWN_END,
+    REDUCED_STAIR_SCALE
+)
+
+
+# Small when entering lift.
+
+key_scale(
+    EXACT_STAIR,
+    F_ENTER_LIFT,
+    REDUCED_STAIR_SCALE
+)
+
+
+# Small during vertical lift travel.
+
+key_scale(
+    EXACT_STAIR,
+    F_LIFT_UP_START,
+    REDUCED_STAIR_SCALE
+)
+
+
+key_scale(
+    EXACT_STAIR,
+    F_LIFT_UP_END,
+    REDUCED_STAIR_SCALE
+)
+
+
+# Still small while exiting door.
+
+key_scale(
+    EXACT_STAIR,
+    F_EXIT_LIFT,
+    REDUCED_STAIR_SCALE
+)
+
+
+# Start restoring AFTER door.
+
+key_scale(
+    EXACT_STAIR,
+    F_SCALE_UP_START,
+    REDUCED_STAIR_SCALE
+)
+
+
+# Full size once completely clear.
+
+key_scale(
+    EXACT_STAIR,
+    F_SCALE_UP_END,
+    NORMAL_STAIR_SCALE
+)
+
+
+# Remain full size forever.
+
+key_scale(
+    EXACT_STAIR,
+    F_STORAGE_ARRIVE,
+    NORMAL_STAIR_SCALE
+)
+
+
+key_scale(
+    EXACT_STAIR,
+    F_END,
+    NORMAL_STAIR_SCALE
+)
+
+
+# ============================================================
+# 47. FINAL STAIR PLACEMENT
+# ============================================================
+
+key_location(
+    EXACT_STAIR,
+    F_PLACE_LIFT,
+
+    STORAGE_POS
+
+    + WORLD_UP * 1.25
+)
+
+
+key_location(
+    EXACT_STAIR,
+    F_PLACE_SIDE,
+
+    Vector(
+        (
+            FINAL_STAIR_POS.x,
+            FINAL_STAIR_POS.y,
+            TARGET_Z + 1.25
+        )
+    )
+)
+
+
+key_location(
+    EXACT_STAIR,
+    F_PLACE_END,
+    FINAL_STAIR_POS
+)
+
+
+key_location(
+    EXACT_STAIR,
+    F_END,
+    FINAL_STAIR_POS
+)
+
+
+key_scale(
+    EXACT_STAIR,
+    F_PLACE_LIFT,
+    NORMAL_STAIR_SCALE
+)
+
+
+key_scale(
+    EXACT_STAIR,
+    F_PLACE_END,
+    NORMAL_STAIR_SCALE
+)
+
+
+# First make location/rotation linear.
+
+make_linear(
+    EXACT_STAIR
+)
+
+
+# Then make ONLY scale smooth.
+
+make_scale_smooth(
+    EXACT_STAIR
+)
+
+
+# ============================================================
+# 48. TIMBER PACKERS
+# ============================================================
+
+for offset in [
+    -1.25,
+    0.0,
+    1.25
+]:
+
+    box(
+        "Final Stair Timber Packer",
+
+        (
+            0.18,
+            1.75,
+            0.14
+        ),
+
+        (
+            FINAL_STAIR_POS.x
+            + offset,
+
+            FINAL_STAIR_POS.y,
+
+            TARGET_Z
+            + 0.07
+        ),
+
+        MAT_TIMBER
+    )
+
+
+# ============================================================
+# 49. CREATE WORKER
+# ============================================================
+
+def create_worker(
+    number
+):
+
+    master = empty(
+        f"CODE4_WORKER_{number:02d}"
+    )
+
+
+    leg_l = box(
+        f"Worker{number}_Leg_L",
+
+        (
+            0.16,
+            0.17,
+            0.76
+        ),
+
+        (
+            0,
+            -0.12,
+            0.42
+        ),
+
+        MAT_PANTS,
+        master
+    )
+
+
+    leg_r = box(
+        f"Worker{number}_Leg_R",
+
+        (
+            0.16,
+            0.17,
+            0.76
+        ),
+
+        (
+            0,
+            0.12,
+            0.42
+        ),
+
+        MAT_PANTS,
+        master
+    )
+
+
+    box(
+        f"Worker{number}_Boot_L",
+
+        (
+            0.28,
+            0.19,
+            0.14
+        ),
+
+        (
+            0.07,
+            -0.12,
+            0.07
+        ),
+
+        MAT_BOOT,
+        master
+    )
+
+
+    box(
+        f"Worker{number}_Boot_R",
+
+        (
+            0.28,
+            0.19,
+            0.14
+        ),
+
+        (
+            0.07,
+            0.12,
+            0.07
+        ),
+
+        MAT_BOOT,
+        master
+    )
+
+
+    box(
+        f"Worker{number}_Torso",
+
+        (
+            0.38,
+            0.55,
+            0.64
+        ),
+
+        (
+            0,
+            0,
+            1.16
+        ),
+
+        MAT_HIVIS,
+        master
+    )
+
+
+    for z in [
+        1.06,
+        1.31
+    ]:
+
+        box(
+            f"Worker{number}_Reflective",
+
+            (
+                0.40,
+                0.57,
+                0.055
+            ),
+
+            (
+                0,
+                0,
+                z
+            ),
+
+            MAT_REFLECTIVE,
+            master
+        )
+
+
+    arm_l = box(
+        f"Worker{number}_Arm_L",
+
+        (
+            0.14,
+            0.14,
+            0.62
+        ),
+
+        (
+            0,
+            -0.37,
+            1.16
+        ),
+
+        MAT_HIVIS,
+        master
+    )
+
+
+    arm_r = box(
+        f"Worker{number}_Arm_R",
+
+        (
+            0.14,
+            0.14,
+            0.62
+        ),
+
+        (
+            0,
+            0.37,
+            1.16
+        ),
+
+        MAT_HIVIS,
+        master
+    )
+
+
+    sphere(
+        f"Worker{number}_Head",
+
+        0.18,
+
+        (
+            0,
+            0,
+            1.68
+        ),
+
+        MAT_SKIN,
+        master
+    )
+
+
+    helmet = sphere(
+        f"Worker{number}_Helmet",
+
+        0.205,
+
+        (
+            0,
+            0,
+            1.85
+        ),
+
+        MAT_HELMET,
+        master
+    )
+
+
+    helmet.scale.z = (
+        0.48
+    )
+
+
+    return {
+
+        "master": master,
+
+        "leg_l": leg_l,
+
+        "leg_r": leg_r,
+
+        "arm_l": arm_l,
+
+        "arm_r": arm_r
+
+    }
+
+
+W1 = create_worker(
+    1
+)
+
+
+W2 = create_worker(
+    2
+)
+
+
+W3 = create_worker(
+    3
+)
+
+
+workers = [
+
+    W1,
+    W2,
+    W3
+
+]
+
+
+# ============================================================
+# 50. WORKER START
+# ============================================================
+
+WORKER_START = (
+
+    TROLLEY_START_POS
+
+    - FORWARD * 1.8
+
+)
+
+
+# ============================================================
+# 51. WORKER BASE ROUTE
+# ============================================================
+
+WORKER_ROUTE = [
+
+    (
+        F_WORKERS_START,
+        WORKER_START
+    ),
+
+    (
+        F_WORKERS_AT_TRUCK,
+        UNLOAD_POS
+    ),
+
+    (
+        F_STAIR_ON_TROLLEY,
+        UNLOAD_POS
+    ),
+
+    (
+        F_SIDE_CLEAR,
+        SIDE_CLEAR_POS
+    ),
+
+    (
+        F_CORNER_CLEAR,
+        CORNER_CLEAR_POS
+    ),
+
+    (
+        F_LIFT_FRONT,
+        LIFT_FRONT_B1
+    ),
+
+    (
+        F_ENTER_LIFT,
+        LIFT_INSIDE_B1
+    ),
+
+    (
+        F_LIFT_UP_START,
+        LIFT_INSIDE_B1
+    ),
+
+    (
+        F_LIFT_UP_END,
+        LIFT_INSIDE_TARGET
+    ),
+
+    (
+        F_EXIT_LIFT,
+        LIFT_FRONT_TARGET
+    ),
+
+    (
+        F_UPPER_CLEAR,
+        UPPER_CLEAR
+    ),
+
+    (
+        F_STORAGE_ROUTE,
+        STORAGE_ROUTE
+    ),
+
+    (
+        F_STORAGE_ARRIVE,
+        STORAGE_POS
+    ),
+
+    (
+        F_PLACE_END,
+        STORAGE_POS
+    ),
+
+    (
+        F_RETURN_START,
+
+        STORAGE_POS
+
+        + Vector(
+            (
+                -1.70,
+                1.40,
+                0
+            )
+        )
+    ),
+
+    (
+        F_RETURN_LIFT_FRONT,
+        LIFT_FRONT_TARGET
+    ),
+
+    (
+        F_RETURN_ENTER_LIFT,
+        LIFT_INSIDE_TARGET
+    ),
+
+    (
+        F_LIFT_DOWN_START,
+        LIFT_INSIDE_TARGET
+    ),
+
+    (
+        F_LIFT_DOWN_END,
+        LIFT_INSIDE_B1
+    ),
+
+    (
+        F_EXIT_B1,
+        LIFT_FRONT_B1
+    ),
+
+    (
+        F_RETURN_CORNER,
+        CORNER_CLEAR_POS
+    ),
+
+    (
+        F_RETURN_SIDE,
+        SIDE_CLEAR_POS
+    ),
+
+    (
+        F_RETURN_TRUCK,
+        UNLOAD_POS
+    ),
+
+    (
+        F_END,
+        UNLOAD_POS
+    )
+
+]
+
+
+# ============================================================
+# 52. WORKER OFFSET ROUTE
+# ============================================================
+
+def create_worker_route(
+    lateral,
+    longitudinal
+):
+
+    result = []
+
+
+    for index, (
+        frame,
+        position
+    ) in enumerate(
+        WORKER_ROUTE
+    ):
+
+        position = Vector(
+            position
+        )
+
+
+        if index < (
+            len(WORKER_ROUTE) - 1
+        ):
+
+            next_position = Vector(
+
+                WORKER_ROUTE[
+                    index + 1
+                ][1]
+
+            )
+
+
+            forward = (
+
+                next_position
+
+                - position
+
+            )
+
+
+            forward.z = 0
+
+
+        else:
+
+            forward = (
+                FORWARD.copy()
+            )
+
+
+        if forward.length < 0.05:
+
+            forward = (
+                FORWARD.copy()
+            )
+
+
+        forward.normalize()
+
+
+        side = Vector(
+            (
+                -forward.y,
+                forward.x,
+                0
+            )
+        )
+
+
+        # workers move closer together inside lift
+
+        inside_lift = (
+
+            F_ENTER_LIFT
+            <= frame
+            <= F_EXIT_LIFT
+
+        ) or (
+
+            F_RETURN_ENTER_LIFT
+            <= frame
+            <= F_EXIT_B1
+
+        )
+
+
+        if inside_lift:
+
+            current_lateral = (
+                lateral * 0.42
+            )
+
+            current_longitudinal = (
+                longitudinal * 0.45
+            )
+
+        else:
+
+            current_lateral = (
+                lateral
+            )
+
+            current_longitudinal = (
+                longitudinal
+            )
+
+
+        worker_position = (
+
+            position
+
+            + side
+            * current_lateral
+
+            + forward
+            * current_longitudinal
+
+        )
+
+
+        result.append(
+            (
+                frame,
+                worker_position
+            )
+        )
+
+
+    return result
+
+
+animate_route(
+    W1["master"],
+
+    create_worker_route(
+        0.0,
+        -1.05
+    )
+)
+
+
+animate_route(
+    W2["master"],
+
+    create_worker_route(
+        -0.67,
+        0.08
+    )
+)
+
+
+animate_route(
+    W3["master"],
+
+    create_worker_route(
+        0.67,
+        0.08
+    )
+)
+
+
+# ============================================================
+# 53. WORKERS DURING UNLOADING
+# ============================================================
+
+UNLOAD_W1 = (
+
+    UNLOAD_POS
+
+    - FORWARD * 1.40
+
+)
+
+
+UNLOAD_W2 = (
+
+    UNLOAD_POS
+
+    + FORWARD * 1.20
+
+    - UNLOAD_SIDE * 0.65
+
+)
+
+
+UNLOAD_W3 = (
+
+    UNLOAD_POS
+
+    + FORWARD * 1.20
+
+    + UNLOAD_SIDE * 0.65
+
+)
+
+
+for frame in [
+
+    F_UNLOAD_START,
+    F_STAIR_LIFT_CLEAR,
+    F_STAIR_MOVE_SIDE,
+    F_STAIR_ON_TROLLEY
+
+]:
+
+    key_location(
+        W1["master"],
+        frame,
+        UNLOAD_W1
+    )
+
+
+    key_location(
+        W2["master"],
+        frame,
+        UNLOAD_W2
+    )
+
+
+    key_location(
+        W3["master"],
+        frame,
+        UNLOAD_W3
+    )
+
+
+# ============================================================
+# 54. WORKERS DURING FINAL PLACEMENT
+# ============================================================
+
+key_location(
+    W1["master"],
+    F_PLACE_LIFT,
+
+    STORAGE_POS
+
+    + Vector(
+        (
+            -1.60,
+            0,
+            0
+        )
+    )
+)
+
+
+key_location(
+    W2["master"],
+    F_PLACE_LIFT,
+
+    STORAGE_POS
+
+    + Vector(
+        (
+            0.55,
+            -1.10,
+            0
+        )
+    )
+)
+
+
+key_location(
+    W3["master"],
+    F_PLACE_LIFT,
+
+    STORAGE_POS
+
+    + Vector(
+        (
+            0.55,
+            1.10,
+            0
+        )
+    )
+)
+
+
+key_location(
+    W1["master"],
+    F_PLACE_END,
+
+    FINAL_STAIR_POS
+
+    + Vector(
+        (
+            -1.70,
+            0,
+            -0.16
+        )
+    )
+)
+
+
+key_location(
+    W2["master"],
+    F_PLACE_END,
+
+    FINAL_STAIR_POS
+
+    + Vector(
+        (
+            0.50,
+            -1.15,
+            -0.16
+        )
+    )
+)
+
+
+key_location(
+    W3["master"],
+    F_PLACE_END,
+
+    FINAL_STAIR_POS
+
+    + Vector(
+        (
+            0.50,
+            1.15,
+            -0.16
+        )
+    )
+)
+
+
+# ============================================================
+# 55. WALK CYCLE
+# ============================================================
+
+def walk_cycle(
+    worker,
+    start_frame,
+    end_frame,
+    step=8
+):
+
+    parts = [
+
+        worker["leg_l"],
+        worker["leg_r"],
+        worker["arm_l"],
+        worker["arm_r"]
+
+    ]
+
+
+    sign = 1
+
+
+    for frame in range(
+        start_frame,
+        end_frame + 1,
+        step
+    ):
+
+        angle = (
+
+            math.radians(
+                16
+            )
+
+            * sign
+
+        )
+
+
+        worker[
+            "leg_l"
+        ].rotation_euler.y = (
+            angle
+        )
+
+
+        worker[
+            "leg_r"
+        ].rotation_euler.y = (
+            -angle
+        )
+
+
+        worker[
+            "arm_l"
+        ].rotation_euler.y = (
+            -angle * 0.70
+        )
+
+
+        worker[
+            "arm_r"
+        ].rotation_euler.y = (
+            angle * 0.70
+        )
+
+
+        for part in parts:
+
+            part.keyframe_insert(
+                data_path="rotation_euler",
+                frame=frame
+            )
+
+
+        sign *= -1
+
+
+WALK_PERIODS = [
+
+    (
+        F_WORKERS_START,
+        F_WORKERS_AT_TRUCK
+    ),
+
+    (
+        F_LEAVE_TRUCK,
+        F_ENTER_LIFT
+    ),
+
+    (
+        F_EXIT_LIFT,
+        F_STORAGE_ARRIVE
+    ),
+
+    (
+        F_RETURN_START,
+        F_RETURN_ENTER_LIFT
+    ),
+
+    (
+        F_EXIT_B1,
+        F_RETURN_TRUCK
+    )
+
+]
+
+
+for worker in workers:
+
+    for start_frame, end_frame in (
+        WALK_PERIODS
+    ):
+
+        walk_cycle(
+            worker,
+            start_frame,
+            end_frame
+        )
+
+
+# ============================================================
+# 56. STORE ORIGINAL LIFT POSITIONS
+# ============================================================
+
+scene.frame_set(
+    1
+)
+
+
+bpy.context.view_layer.update()
+
+
+lift_original = {
+
+    obj.name:
+    obj.location.copy()
+
+    for obj in lift_parts
+
+}
+
+
+b1_original = {
+
+    obj.name:
+    obj.location.copy()
+
+    for obj in b1_doors
+
+}
+
+
+target_original = {
+
+    obj.name:
+    obj.location.copy()
+
+    for obj in target_doors
+
+}
+
+
+# ============================================================
+# 57. CLEAR PREVIOUS LIFT / DOOR ANIMATION
+# ============================================================
+
+for obj in (
+
+    lift_parts
+    + b1_doors
+    + target_doors
+
+):
+
+    if obj.animation_data:
+
+        obj.animation_data_clear()
+
+
+# restore locations
+
+for obj in lift_parts:
+
+    obj.location = (
+        lift_original[
+            obj.name
+        ].copy()
+    )
+
+
+for obj in b1_doors:
+
+    obj.location = (
+        b1_original[
+            obj.name
+        ].copy()
+    )
+
+
+for obj in target_doors:
+
+    obj.location = (
+        target_original[
+            obj.name
+        ].copy()
+    )
+
+
+# ============================================================
+# 58. LIFT CAR ANIMATION
+# ============================================================
+
+for obj in lift_parts:
+
+    bottom = (
+        lift_original[
+            obj.name
+        ].copy()
+    )
+
+
+    top = (
+        bottom.copy()
+    )
+
+
+    top.z += (
+        LIFT_TRAVEL
+    )
+
+
+    # B1
+
+    key_location(
+        obj,
+        F_START,
+        bottom
+    )
+
+
+    key_location(
+        obj,
+        F_LIFT_UP_START,
+        bottom
+    )
+
+
+    # go up
+
+    key_location(
+        obj,
+        F_LIFT_UP_END,
+        top
+    )
+
+
+    # stay at upper floor
+
+    key_location(
+        obj,
+        F_LIFT_DOWN_START,
+        top
+    )
+
+
+    # return
+
+    key_location(
+        obj,
+        F_LIFT_DOWN_END,
+        bottom
+    )
+
+
+    key_location(
+        obj,
+        F_END,
+        bottom
+    )
+
+
+    make_linear(
+        obj
+    )
+
+
+# ============================================================
+# 59. LIFT DOOR ANIMATION
+# ============================================================
+
+def animate_door_pair(
+    doors,
+    originals,
+    sequences
+):
+
+    center_x = (
+
+        sum(
+
+            originals[
+                obj.name
+            ].x
+
+            for obj in doors
+
+        )
+
+        / len(
+            doors
+        )
+
+    )
+
+
+    for obj in doors:
+
+        closed_position = (
+            originals[
+                obj.name
+            ].copy()
+        )
+
+
+        if closed_position.x < center_x:
+
+            direction = -1
+
+        else:
+
+            direction = 1
+
+
+        opened_position = (
+            closed_position.copy()
+        )
+
+
+        opened_position.x += (
+            direction * 0.57
+        )
+
+
+        for (
+            frame_closed,
+            frame_open,
+            frame_close_start,
+            frame_closed_end
+        ) in sequences:
+
+            key_location(
+                obj,
+                frame_closed,
+                closed_position
+            )
+
+
+            key_location(
+                obj,
+                frame_open,
+                opened_position
+            )
+
+
+            key_location(
+                obj,
+                frame_close_start,
+                opened_position
+            )
+
+
+            key_location(
+                obj,
+                frame_closed_end,
+                closed_position
+            )
+
+
+        make_linear(
+            obj
+        )
+
+
+# ============================================================
+# B1 DOORS
+# ============================================================
+
+animate_door_pair(
+
+    b1_doors,
+
+    b1_original,
+
+    [
+
+        (
+            1055,
+            1068,
+            1120,
+            F_B1_DOOR_CLOSE
+        ),
+
+        (
+            1750,
+            F_B1_RETURN_OPEN,
+            1815,
+            1830
+        )
+
+    ]
+
+)
+
+
+# ============================================================
+# TARGET FLOOR DOORS
+# ============================================================
+
+animate_door_pair(
+
+    target_doors,
+
+    target_original,
+
+    [
+
+        (
+            1235,
+            F_TARGET_DOOR_OPEN,
+            1295,
+            1310
+        ),
+
+        (
+            1575,
+            1590,
+            1640,
+            F_TARGET_DOOR_CLOSE
+        )
+
+    ]
+
+)
+
+
+# ============================================================
+# 60. CREATE CAMERA
+# ============================================================
+
+old_camera = bpy.data.objects.get(
+    CAMERA_NAME
+)
+
+
+if old_camera:
+
+    bpy.data.objects.remove(
+        old_camera,
+        do_unlink=True
+    )
+
+
+camera_data = bpy.data.cameras.new(
+    CAMERA_NAME
+)
+
+
+camera_data.clip_start = (
+    0.05
+)
+
+
+camera_data.clip_end = (
+    2500
+)
+
+
+camera = bpy.data.objects.new(
+    CAMERA_NAME,
+    camera_data
+)
+
+
+COL.objects.link(
+    camera
+)
+
+
+camera.rotation_mode = (
+    'QUATERNION'
+)
+
+
+# ============================================================
+# 61. CAMERA LOOK AT
+# ============================================================
+
+def look_at(
+    camera_obj,
+    position,
+    target
+):
+
+    position = Vector(
+        position
+    )
+
+
+    target = Vector(
+        target
+    )
+
+
+    camera_obj.location = (
+        position
+    )
+
+
+    direction = (
+
+        target
+
+        - position
+
+    )
+
+
+    if direction.length < 0.001:
+
+        return
+
+
+    camera_obj.rotation_quaternion = (
+
+        direction.to_track_quat(
+            '-Z',
+            'Y'
+        )
+
+    )
+
+
+# ============================================================
+# 62. LIFT FRONT CAMERA
+#
+# CAMERA
+#       |
+#       |
+#       v
+# -------------------
+#     LIFT DOOR
+#
+# Camera remains OUTSIDE shaft.
+#
+# During lift movement:
+# camera Z follows elevator Z.
+# ============================================================
+
+def lift_camera_position(
+    current_z
+):
+
+    return Vector(
+        (
+            LIFT_CENTER.x,
+
+            B1_DOOR_CENTER.y
+            - LIFT_CAMERA_DISTANCE,
+
+            current_z
+            + LIFT_CAMERA_HEIGHT
+        )
+    )
+
+
+def lift_camera_target(
+    current_z
+):
+
+    return Vector(
+        (
+            LIFT_CENTER.x,
+
+            LIFT_CENTER.y,
+
+            current_z
+            + 1.00
+        )
+    )
+
+
+# ============================================================
+# 63. CAMERA BAKE
+# ============================================================
+
+for frame in range(
+    F_START,
+    F_END + 1,
+    CAMERA_STEP
+):
+
+    scene.frame_set(
+        frame
+    )
+
+
+    bpy.context.view_layer.update()
+
+
+    trolley_world = (
+        TROLLEY.matrix_world.translation.copy()
+    )
+
+
+    stair_world = (
+        EXACT_STAIR.matrix_world.translation.copy()
+    )
+
+
+    # ========================================================
+    # A. TRUCK REVERSE + UNLOAD
+    # ========================================================
+
+    if frame <= F_STAIR_ON_TROLLEY:
+
+        cam_pos = (
+
+            TRUCK_PARK_POS
+
+            - FORWARD * 9.0
+
+            + UNLOAD_SIDE * 8.0
+
+            + WORLD_UP * 4.0
+
+        )
+
+
+        target = (
+
+            UNLOAD_POS
+
+            + WORLD_UP * 1.25
+
+        )
+
+
+        camera_data.lens = (
+            34
+        )
+
+
+    # ========================================================
+    # B. TROLLEY MOVING TOWARD LIFT
+    # ========================================================
+
+    elif frame < F_LIFT_FRONT:
+
+        direction = (
+
+            LIFT_FRONT_B1
+
+            - trolley_world
+
+        )
+
+
+        direction.z = 0
+
+
+        if direction.length < 0.10:
+
+            direction = (
+                FORWARD.copy()
+            )
+
+
+        direction.normalize()
+
+
+        side = Vector(
+            (
+                -direction.y,
+                direction.x,
+                0
+            )
+        )
+
+
+        cam_pos = (
+
+            trolley_world
+
+            - direction * 7.0
+
+            + side * 5.0
+
+            + WORLD_UP * 2.8
+
+        )
+
+
+        target = (
+
+            stair_world
+
+            + WORLD_UP * 0.60
+
+        )
+
+
+        camera_data.lens = (
+            30
+        )
+
+
+    # ========================================================
+    # C. LIFT APPROACH / ENTER
+    #
+    # FRONT VIEW.
+    # ========================================================
+
+    elif frame <= F_LIFT_UP_START:
+
+        cam_pos = (
+            lift_camera_position(
+                B1_Z
+            )
+        )
+
+
+        target = (
+            lift_camera_target(
+                B1_Z
+            )
+        )
+
+
+        camera_data.lens = (
+            35
+        )
+
+
+    # ========================================================
+    # D. LIFT GOING UP
+    #
+    # Camera travels straight upward outside lift.
+    # ========================================================
+
+    elif frame <= F_LIFT_UP_END:
+
+        t = (
+
+            frame
+            - F_LIFT_UP_START
+
+        ) / (
+
+            F_LIFT_UP_END
+            - F_LIFT_UP_START
+
+        )
+
+
+        t = max(
+            0.0,
+            min(
+                1.0,
+                t
+            )
+        )
+
+
+        current_z = (
+
+            B1_Z
+
+            + (
+                TARGET_Z
+                - B1_Z
+            ) * t
+
+        )
+
+
+        cam_pos = (
+            lift_camera_position(
+                current_z
+            )
+        )
+
+
+        target = (
+            lift_camera_target(
+                current_z
+            )
+        )
+
+
+        camera_data.lens = (
+            34
+        )
+
+
+    # ========================================================
+    # E. LIFT ARRIVES / DOORS OPEN / EXIT
+    #
+    # Still frontal.
+    # ========================================================
+
+    elif frame <= F_EXIT_LIFT:
+
+        cam_pos = (
+            lift_camera_position(
+                TARGET_Z
+            )
+        )
+
+
+        target = (
+            lift_camera_target(
+                TARGET_Z
+            )
+        )
+
+
+        camera_data.lens = (
+            35
+        )
+
+
+    # ========================================================
+    # F. CLEAR LIFT
+    #
+    # Show stair restoring to full size.
+    # ========================================================
+
+    elif frame <= F_UPPER_CLEAR:
+
+        cam_pos = (
+
+            LIFT_FRONT_TARGET
+
+            + Vector(
+                (
+                    6.5,
+                    -5.5,
+                    3.0
+                )
+            )
+
+        )
+
+
+        target = (
+
+            stair_world
+
+            + WORLD_UP * 0.55
+
+        )
+
+
+        camera_data.lens = (
+            31
+        )
+
+
+    # ========================================================
+    # G. MOVE ACROSS UPPER FLOOR
+    # ========================================================
+
+    elif frame <= F_STORAGE_ARRIVE:
+
+        direction = (
+
+            STORAGE_POS
+
+            - trolley_world
+
+        )
+
+
+        direction.z = 0
+
+
+        if direction.length < 0.10:
+
+            direction = Vector(
+                (
+                    1,
+                    0,
+                    0
+                )
+            )
+
+
+        direction.normalize()
+
+
+        side = Vector(
+            (
+                -direction.y,
+                direction.x,
+                0
+            )
+        )
+
+
+        cam_pos = (
+
+            trolley_world
+
+            - direction * 7.0
+
+            + side * 5.0
+
+            + WORLD_UP * 3.0
+
+        )
+
+
+        target = (
+
+            stair_world
+
+            + WORLD_UP * 0.60
+
+        )
+
+
+        camera_data.lens = (
+            31
+        )
+
+
+    # ========================================================
+    # H. PLACE STAIR
+    # ========================================================
+
+    elif frame <= F_PLACE_END:
+
+        cam_pos = (
+
+            FINAL_STAIR_POS
+
+            + Vector(
+                (
+                    8.0,
+                    -8.0,
+                    3.6
+                )
+            )
+
+        )
+
+
+        target = (
+
+            stair_world
+
+            + WORLD_UP * 0.60
+
+        )
+
+
+        camera_data.lens = (
+            34
+        )
+
+
+    # ========================================================
+    # I. EMPTY TROLLEY RETURNING TO LIFT
+    # ========================================================
+
+    elif frame < F_RETURN_LIFT_FRONT:
+
+        direction = (
+
+            LIFT_FRONT_TARGET
+
+            - trolley_world
+
+        )
+
+
+        direction.z = 0
+
+
+        if direction.length < 0.10:
+
+            direction = Vector(
+                (
+                    -1,
+                    0,
+                    0
+                )
+            )
+
+
+        direction.normalize()
+
+
+        side = Vector(
+            (
+                -direction.y,
+                direction.x,
+                0
+            )
+        )
+
+
+        cam_pos = (
+
+            trolley_world
+
+            - direction * 6.5
+
+            + side * 4.5
+
+            + WORLD_UP * 2.7
+
+        )
+
+
+        target = (
+
+            trolley_world
+
+            + WORLD_UP * 0.75
+
+        )
+
+
+        camera_data.lens = (
+            30
+        )
+
+
+    # ========================================================
+    # J. WORKERS ENTER LIFT AT TARGET LEVEL
+    # ========================================================
+
+    elif frame <= F_LIFT_DOWN_START:
+
+        cam_pos = (
+            lift_camera_position(
+                TARGET_Z
+            )
+        )
+
+
+        target = (
+            lift_camera_target(
+                TARGET_Z
+            )
+        )
+
+
+        camera_data.lens = (
+            35
+        )
+
+
+    # ========================================================
+    # K. LIFT GOING DOWN
+    #
+    # Frontal camera travels down.
+    # ========================================================
+
+    elif frame <= F_LIFT_DOWN_END:
+
+        t = (
+
+            frame
+            - F_LIFT_DOWN_START
+
+        ) / (
+
+            F_LIFT_DOWN_END
+            - F_LIFT_DOWN_START
+
+        )
+
+
+        t = max(
+            0.0,
+            min(
+                1.0,
+                t
+            )
+        )
+
+
+        current_z = (
+
+            TARGET_Z
+
+            + (
+                B1_Z
+                - TARGET_Z
+            ) * t
+
+        )
+
+
+        cam_pos = (
+            lift_camera_position(
+                current_z
+            )
+        )
+
+
+        target = (
+            lift_camera_target(
+                current_z
+            )
+        )
+
+
+        camera_data.lens = (
+            34
+        )
+
+
+    # ========================================================
+    # L. B1 LIFT EXIT
+    # ========================================================
+
+    elif frame <= F_EXIT_B1:
+
+        cam_pos = (
+            lift_camera_position(
+                B1_Z
+            )
+        )
+
+
+        target = (
+            lift_camera_target(
+                B1_Z
+            )
+        )
+
+
+        camera_data.lens = (
+            35
+        )
+
+
+    # ========================================================
+    # M. TROLLEY RETURN TO TRUCK
+    # ========================================================
+
+    elif frame < F_RETURN_TRUCK:
+
+        direction = (
+
+            UNLOAD_POS
+
+            - trolley_world
+
+        )
+
+
+        direction.z = 0
+
+
+        if direction.length < 0.10:
+
+            direction = (
+                FORWARD.copy()
+            )
+
+
+        direction.normalize()
+
+
+        side = Vector(
+            (
+                -direction.y,
+                direction.x,
+                0
+            )
+        )
+
+
+        cam_pos = (
+
+            trolley_world
+
+            - direction * 6.5
+
+            + side * 4.5
+
+            + WORLD_UP * 2.7
+
+        )
+
+
+        target = (
+
+            trolley_world
+
+            + WORLD_UP * 0.75
+
+        )
+
+
+        camera_data.lens = (
+            30
+        )
+
+
+    # ========================================================
+    # N. FINAL TRUCK VIEW
+    # ========================================================
+
+    else:
+
+        cam_pos = (
+
+            TRUCK_PARK_POS
+
+            - FORWARD * 10.0
+
+            + UNLOAD_SIDE * 8.5
+
+            + WORLD_UP * 4.2
+
+        )
+
+
+        target = (
+
+            TRUCK_PARK_POS
+
+            + WORLD_UP * 1.45
+
+        )
+
+
+        camera_data.lens = (
+            37
+        )
+
+
+    look_at(
+        camera,
+        cam_pos,
+        target
+    )
+
+
+    camera.keyframe_insert(
+        data_path="location",
+        frame=frame
+    )
+
+
+    camera.keyframe_insert(
+        data_path="rotation_quaternion",
+        frame=frame
+    )
+
+
+    camera_data.keyframe_insert(
+        data_path="lens",
+        frame=frame
+    )
+
+
+# ============================================================
+# 64. CAMERA INTERPOLATION
+# ============================================================
+
+make_linear(
+    camera
+)
+
+
+if camera_data.animation_data:
+
+    action = (
+        camera_data.animation_data.action
+    )
+
+
+    if action:
+
+        try:
+
+            curves = action.fcurves
+
+        except:
+
+            curves = []
+
+
+        for curve in curves:
+
+            for key in curve.keyframe_points:
+
+                key.interpolation = (
+                    'LINEAR'
+                )
+
+
+# ============================================================
+# 65. CAMERA SWITCH
+# ============================================================
+
+code3_camera = bpy.data.objects.get(
+    "CAM_TRUCK_CODE3"
+)
+
+
+if code3_camera:
+
+    marker = scene.timeline_markers.new(
+        "CODE4_CODE3_CAMERA",
+        frame=1
+    )
+
+
+    try:
+
+        marker.camera = (
+            code3_camera
+        )
+
+    except:
+
+        pass
+
+
+code4_marker = scene.timeline_markers.new(
+    "CODE4_CAMERA_START",
+    frame=F_START
+)
+
+
+try:
+
+    code4_marker.camera = (
+        camera
+    )
+
+except:
+
+    pass
+
+
+scene.camera = (
+    camera
+)
+
+
+# ============================================================
+# 66. TIMELINE MARKERS
+# ============================================================
+
+markers = [
+
+    (
+        "CODE4_01_TRUCK_REVERSE",
+        F_TRUCK_MOVE_START
+    ),
+
+    (
+        "CODE4_02_TRUCK_PARKED",
+        F_TRUCK_PARK
+    ),
+
+    (
+        "CODE4_03_WORKERS_APPROACH",
+        F_WORKERS_START
+    ),
+
+    (
+        "CODE4_04_TROLLEY_READY",
+        F_TROLLEY_AT_TRUCK
+    ),
+
+    (
+        "CODE4_05_STAIR_UNLOAD",
+        F_UNLOAD_START
+    ),
+
+    (
+        "CODE4_06_STAIR_CLEAR_TRUCK",
+        F_STAIR_MOVE_SIDE
+    ),
+
+    (
+        "CODE4_07_STAIR_ON_TROLLEY",
+        F_STAIR_ON_TROLLEY
+    ),
+
+    (
+        "CODE4_08_MOVE_TO_LIFT",
+        F_LEAVE_TRUCK
+    ),
+
+    (
+        "CODE4_09_SCALE_STAIR_DOWN",
+        F_SCALE_DOWN_START
+    ),
+
+    (
+        "CODE4_10_LIFT_FRONT",
+        F_LIFT_FRONT
+    ),
+
+    (
+        "CODE4_11_ENTER_LIFT",
+        F_ENTER_LIFT
+    ),
+
+    (
+        "CODE4_12_LIFT_UP",
+        F_LIFT_UP_START
+    ),
+
+    (
+        "CODE4_13_ARRIVE_" + TARGET_LEVEL,
+        F_LIFT_UP_END
+    ),
+
+    (
+        "CODE4_14_EXIT_LIFT",
+        F_EXIT_LIFT
+    ),
+
+    (
+        "CODE4_15_RESTORE_STAIR_SIZE",
+        F_SCALE_UP_START
+    ),
+
+    (
+        "CODE4_16_STAIR_FULL_SIZE",
+        F_SCALE_UP_END
+    ),
+
+    (
+        "CODE4_17_MOVE_TO_STAGING",
+        F_STORAGE_ROUTE
+    ),
+
+    (
+        "CODE4_18_PLACE_STAIR",
+        F_PLACE_LIFT
+    ),
+
+    (
+        "CODE4_19_STAIR_PLACED",
+        F_PLACE_END
+    ),
+
+    (
+        "CODE4_20_WORKERS_RETURN",
+        F_RETURN_START
+    ),
+
+    (
+        "CODE4_21_LIFT_DOWN",
+        F_LIFT_DOWN_START
+    ),
+
+    (
+        "CODE4_22_RETURN_B1",
+        F_LIFT_DOWN_END
+    ),
+
+    (
+        "CODE4_23_RETURN_TO_TRUCK",
+        F_RETURN_TRUCK
+    )
+
+]
+
+
+for name, frame in markers:
+
+    scene.timeline_markers.new(
+        name,
+        frame=frame
+    )
+
+
+# ============================================================
+# 67. TIMELINE
+# ============================================================
+
+scene.frame_start = 1
+
+scene.frame_end = (
+    F_END
+)
+
+
+scene.frame_set(
+    F_START
+)
+
+
+bpy.context.view_layer.update()
+
+
+# ============================================================
+# 68. SELECT CAMERA
+# ============================================================
+
+bpy.ops.object.select_all(
+    action='DESELECT'
+)
+
+
+camera.select_set(
+    True
+)
+
+
+bpy.context.view_layer.objects.active = (
+    camera
+)
+
+
+# ============================================================
+# 69. FINAL REPORT
+# ============================================================
+
+print(
+    "\n"
+    "=================================================="
+)
+
+
+print(
+    "TCA CODE 4 V4 COMPLETE"
+)
+
+
+print(
+    "=================================================="
+)
+
+
+print(
+    ""
+)
+
+
+print(
+    "EXACT STAIR:"
+)
+
+
+print(
+    "Copied directly from CARGO_STAIR_MASTER"
+)
+
+
+print(
+    "Exact mesh count:",
+    len(
+        duplicated_meshes
+    )
+)
+
+
+print(
+    ""
+)
+
+
+print(
+    "LIFT SCALE:"
+)
+
+
+print(
+    "Outside lift = 100%"
+)
+
+
+print(
+    "Inside lift =",
+    round(
+        STAIR_LIFT_SCALE * 100
+    ),
+    "%"
+)
+
+
+print(
+    "Scale down:",
+    F_SCALE_DOWN_START,
+    "->",
+    F_SCALE_DOWN_END
+)
+
+
+print(
+    "Restore scale:",
+    F_SCALE_UP_START,
+    "->",
+    F_SCALE_UP_END
+)
+
+
+print(
+    ""
+)
+
+
+print(
+    "LIFT CAMERA:"
+)
+
+
+print(
+    "Distance from doors:",
+    LIFT_CAMERA_DISTANCE,
+    "m"
+)
+
+
+print(
+    "Camera looks straight into lift."
+)
+
+
+print(
+    "Camera moves vertically with lift."
+)
+
+
+print(
+    ""
+)
+
+
+print(
+    "TARGET FLOOR:",
+    TARGET_LEVEL
+)
+
+
+print(
+    "Target elevation:",
+    round(
+        TARGET_Z,
+        2
+    ),
+    "m"
+)
+
+
+print(
+    ""
+)
+
+
+print(
+    "SEQUENCE:"
+)
+
+
+print(
+    "Truck reverse"
+)
+
+
+print(
+    "-> Workers + trolley"
+)
+
+
+print(
+    "-> Exact stair unload"
+)
+
+
+print(
+    "-> Stair on trolley"
+)
+
+
+print(
+    "-> Stair shrinks before lift"
+)
+
+
+print(
+    "-> Lift up"
+)
+
+
+print(
+    "-> Stair exits"
+)
+
+
+print(
+    "-> Stair restores to full size"
+)
+
+
+print(
+    "-> Material staging"
+)
+
+
+print(
+    "-> Place stair on timber"
+)
+
+
+print(
+    "-> Workers/trolley return"
+)
+
+
+print(
+    "-> Final truck view"
+)
+
+
+print(
+    ""
+)
+
+
+print(
+    "Animation:",
+    F_START,
+    "->",
+    F_END
+)
+
+
+print(
+    "=================================================="
+)
