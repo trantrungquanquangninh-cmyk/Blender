@@ -4,44 +4,46 @@ from mathutils import Vector
 
 
 # ============================================================
-# TCA CBD OFFICE DELIVERY DEMO
-# CLEAN VERSION
+# TCA - MELBOURNE CBD OFFICE BUILDING V4
+# COMPLETE BUILDING / SITE SCRIPT
 #
-# STREET
-#   ↓
-# GARAGE ENTRANCE
-#   ↓
-# INTERNAL RAMP
-#   ↓
-# BASEMENT B1
-#   ↓
-# LIFT / UNLOADING AREA
+# BUILDING ONLY - NO TRUCK
 #
 # Includes:
-# - Office building
-# - Basement
-# - Proper ramp
-# - Lift shaft
-# - Office interior
-# - B1 services
-# - Truck + folded crane
-# - Steel stair cargo
-# - Truck animation
-# - Chase camera
+# - Melbourne CBD style office building
+# - Fully enclosed Ground Floor
+# - Main lobby entrance
+# - Curtain wall upper levels
+# - Basement B1
+# - CLEAN OPEN RAMP VOID
+# - Transition ramp
+# - Ramp kerbs / retaining walls / drain
+# - Lift pit / shaft / doors / guide rails / car
+# - Basement parking
+# - Basement services
+# - Street + kerb + footpaths
+# - Street trees
+# - Street lights
+# - Surrounding CBD buildings
+# - Landscape shrubs
+# - Reference points for future truck animation
+#
+# IMPORTANT:
+# NO GROUND SLAB ABOVE THE DESCENDING RAMP.
 # ============================================================
 
 
 # ============================================================
-# GENERAL
+# 01 - GENERAL
 # ============================================================
 
 CLEAR_SCENE = True
 
-PROJECT_NAME = "TCA_CBD_OFFICE_CLEAN"
+PROJECT_NAME = "TCA_CBD_BUILDING_V4"
 
 
 # ============================================================
-# BUILDING
+# 02 - BUILDING
 # ============================================================
 
 LEVEL_COUNT = 8
@@ -54,101 +56,179 @@ TYPICAL_HEIGHT = 3.50
 
 SLAB_THICKNESS = 0.30
 
+FRONT_Y = -BUILDING_DEPTH / 2
+BACK_Y = BUILDING_DEPTH / 2
+
 
 # ============================================================
-# BASEMENT
+# 03 - BASEMENT
 # ============================================================
 
 BASEMENT_Z = -4.20
 
 BASEMENT_WALL_THICKNESS = 0.30
 
+BASEMENT_SLAB_THICKNESS = 0.30
+
 
 # ============================================================
-# GARAGE
+# 04 - GARAGE / RAMP
 # ============================================================
 
-FRONT_Y = -BUILDING_DEPTH / 2
-# = -21
-
-GARAGE_X = 11.0
+GARAGE_X = 10.50
 
 GARAGE_CLEAR_WIDTH = 6.20
+GARAGE_PORTAL_WIDTH = 6.90
 
-GARAGE_ZONE_WIDTH = 7.00
+GARAGE_RAMP_WIDTH = 6.80
 
-GARAGE_CLEAR_HEIGHT = 4.10
+GARAGE_CLEAR_HEIGHT = 3.80
 
-ENTRY_FLAT_LENGTH = 3.0
 
-RAMP_START_Y = FRONT_Y + ENTRY_FLAT_LENGTH
+# ------------------------------------------------------------
+# Ramp sequence:
+#
+# STREET
+# -> FLAT ENTRY
+# -> TOP TRANSITION
+# -> MAIN SLOPE
+# -> BOTTOM TRANSITION
+# -> B1 LANDING
+# ------------------------------------------------------------
 
-RAMP_RUN = 26.0
+ENTRY_FLAT_LENGTH = 3.00
 
-RAMP_END_Y = RAMP_START_Y + RAMP_RUN
+TOP_TRANSITION_LENGTH = 2.50
+
+MAIN_RAMP_LENGTH = 23.00
+
+BOTTOM_TRANSITION_LENGTH = 3.50
+
+B1_LANDING_LENGTH = 6.00
+
+
+RAMP_START_Y = (
+    FRONT_Y
+    + ENTRY_FLAT_LENGTH
+)
+
+TOP_TRANSITION_END_Y = (
+    RAMP_START_Y
+    + TOP_TRANSITION_LENGTH
+)
+
+MAIN_RAMP_END_Y = (
+    TOP_TRANSITION_END_Y
+    + MAIN_RAMP_LENGTH
+)
+
+RAMP_END_Y = (
+    MAIN_RAMP_END_Y
+    + BOTTOM_TRANSITION_LENGTH
+)
+
+
+# ------------------------------------------------------------
+# Ramp vertical profile
+# ------------------------------------------------------------
+
+TOP_TRANSITION_DROP = 0.22
+
+BOTTOM_TRANSITION_RISE = 0.22
+
+
+MAIN_RAMP_START_Z = (
+    -TOP_TRANSITION_DROP
+)
+
+MAIN_RAMP_END_Z = (
+    BASEMENT_Z
+    + BOTTOM_TRANSITION_RISE
+)
+
 
 RAMP_THICKNESS = 0.22
 
-RAMP_SIDE_WALL_HEIGHT = 1.10
+RAMP_KERB_HEIGHT = 0.14
+RAMP_KERB_WIDTH = 0.16
+
+RAMP_WALL_HEIGHT = 1.10
+RAMP_WALL_THICKNESS = 0.20
 
 
 # ============================================================
-# LIFT
+# 05 - LIFT
 # ============================================================
 
-LIFT_X = -5.0
-LIFT_Y = 5.0
+LIFT_X = -5.50
+LIFT_Y = 5.00
 
-SHAFT_WIDTH = 3.40
-SHAFT_DEPTH = 3.40
+SHAFT_WIDTH = 3.50
+SHAFT_DEPTH = 3.50
 
 SHAFT_WALL = 0.20
 
-LIFT_OPENING_W = 3.60
-LIFT_OPENING_D = 3.60
+LIFT_OPENING_W = 3.65
+LIFT_OPENING_D = 3.65
 
-LIFT_DOOR_W = 1.20
-LIFT_DOOR_H = 2.20
+LIFT_DOOR_W = 1.30
+LIFT_DOOR_H = 2.25
 
-LIFT_PIT_DEPTH = 1.20
-LIFT_OVERRUN = 3.20
+LIFT_PIT_DEPTH = 1.30
+LIFT_OVERRUN = 3.50
 
-
-# ============================================================
-# STREET
-# ============================================================
-
-ROAD_LENGTH = 110.0
-ROAD_WIDTH = 15.0
-
-ROAD_CENTER_Y = FRONT_Y - 10.5
-
-FOOTPATH_WIDTH = 4.0
-FOOTPATH_Y = FRONT_Y - 2.0
+LIFT_CAR_W = 2.05
+LIFT_CAR_D = 1.90
+LIFT_CAR_H = 2.50
 
 
 # ============================================================
-# TRUCK / ANIMATION
+# 06 - STREET
 # ============================================================
 
-FRAME_START = 1
-FRAME_END = 520
+ROAD_LENGTH = 130.0
+ROAD_WIDTH = 14.0
 
-CAMERA_BACK = 7.0
-CAMERA_SIDE = -1.0
-CAMERA_HEIGHT = 2.20
+ROAD_CENTER_Y = (
+    FRONT_Y - 10.0
+)
 
-CAMERA_LOOK_AHEAD = 5.0
+NEAR_FOOTPATH_WIDTH = 4.0
 
-CAMERA_TARGET_HEIGHT = 1.40
+NEAR_FOOTPATH_Y = (
+    FRONT_Y - 2.0
+)
 
-CAMERA_LENS = 29
+OPPOSITE_FOOTPATH_Y = (
+    ROAD_CENTER_Y
+    - ROAD_WIDTH / 2
+    - 2.0
+)
 
-CAMERA_BAKE_STEP = 2
+KERB_WIDTH = 0.18
+KERB_HEIGHT = 0.15
 
 
 # ============================================================
-# CLEAR EVERYTHING
+# 07 - MAIN ENTRY
+# ============================================================
+
+ENTRY_X = -8.00
+ENTRY_WIDTH = 4.20
+
+ENTRY_LEFT = (
+    ENTRY_X
+    - ENTRY_WIDTH / 2
+)
+
+ENTRY_RIGHT = (
+    ENTRY_X
+    + ENTRY_WIDTH / 2
+)
+
+
+# ============================================================
+# 08 - CLEAR SCENE
 # ============================================================
 
 if CLEAR_SCENE:
@@ -161,16 +241,21 @@ if CLEAR_SCENE:
         use_global=False
     )
 
-    for col in list(bpy.data.collections):
+    for collection in list(
+        bpy.data.collections
+    ):
 
         try:
-            bpy.data.collections.remove(col)
+            bpy.data.collections.remove(
+                collection
+            )
+
         except:
             pass
 
 
 # ============================================================
-# COLLECTIONS
+# 09 - COLLECTIONS
 # ============================================================
 
 ROOT = bpy.data.collections.new(
@@ -182,73 +267,83 @@ bpy.context.scene.collection.children.link(
 )
 
 
-def new_collection(name):
+def create_collection(name):
 
-    col = bpy.data.collections.new(name)
+    col = bpy.data.collections.new(
+        name
+    )
 
-    ROOT.children.link(col)
+    ROOT.children.link(
+        col
+    )
 
     return col
 
 
-COL_CITY = new_collection(
-    "01_CITY"
+COL_SITE = create_collection(
+    "01_SITE"
 )
 
-COL_BASEMENT = new_collection(
-    "02_BASEMENT"
+COL_LANDSCAPE = create_collection(
+    "02_LANDSCAPE"
 )
 
-COL_GARAGE = new_collection(
-    "03_GARAGE_RAMP"
+COL_CONTEXT = create_collection(
+    "03_CONTEXT_BUILDINGS"
 )
 
-COL_STRUCTURE = new_collection(
-    "04_STRUCTURE"
+COL_BASEMENT = create_collection(
+    "04_BASEMENT"
 )
 
-COL_LIFT = new_collection(
-    "05_LIFT"
+COL_RAMP = create_collection(
+    "05_GARAGE_RAMP"
 )
 
-COL_FACADE = new_collection(
-    "06_FACADE"
+COL_STRUCTURE = create_collection(
+    "06_STRUCTURE"
 )
 
-COL_OFFICE = new_collection(
-    "07_OFFICE"
+COL_LIFT = create_collection(
+    "07_LIFT"
 )
 
-COL_SERVICES = new_collection(
-    "08_B1_SERVICES"
+COL_FACADE = create_collection(
+    "08_FACADE"
 )
 
-COL_TRUCK = new_collection(
-    "09_TRUCK"
+COL_INTERIOR = create_collection(
+    "09_INTERIOR"
 )
 
-COL_ANIMATION = new_collection(
-    "10_ANIMATION"
+COL_SERVICES = create_collection(
+    "10_B1_SERVICES"
 )
 
-COL_LIGHTING = new_collection(
+COL_LIGHTING = create_collection(
     "11_LIGHTING"
 )
 
+COL_REFERENCE = create_collection(
+    "12_REFERENCE_POINTS"
+)
+
 
 # ============================================================
-# MATERIAL
+# 10 - MATERIAL
 # ============================================================
 
-def make_material(
+def material(
     name,
-    color,
+    colour,
     metallic=0.0,
     roughness=0.5,
     transmission=0.0
 ):
 
-    mat = bpy.data.materials.get(name)
+    mat = bpy.data.materials.get(
+        name
+    )
 
     if mat is None:
 
@@ -267,19 +362,23 @@ def make_material(
         bsdf.inputs[
             "Base Color"
         ].default_value = (
-            color[0],
-            color[1],
-            color[2],
+            colour[0],
+            colour[1],
+            colour[2],
             1.0
         )
 
-        bsdf.inputs[
-            "Metallic"
-        ].default_value = metallic
+        if "Metallic" in bsdf.inputs:
 
-        bsdf.inputs[
-            "Roughness"
-        ].default_value = roughness
+            bsdf.inputs[
+                "Metallic"
+            ].default_value = metallic
+
+        if "Roughness" in bsdf.inputs:
+
+            bsdf.inputs[
+                "Roughness"
+            ].default_value = roughness
 
         if "Transmission Weight" in bsdf.inputs:
 
@@ -287,164 +386,174 @@ def make_material(
                 "Transmission Weight"
             ].default_value = transmission
 
+
+    mat.diffuse_color = (
+        colour[0],
+        colour[1],
+        colour[2],
+        1.0
+    )
+
     return mat
 
 
 # ============================================================
-# MATERIALS
+# 11 - MATERIAL LIBRARY
 # ============================================================
 
-MAT_CONCRETE = make_material(
-    "Concrete",
-    (0.43, 0.43, 0.42),
+MAT_CONCRETE = material(
+    "AU Concrete",
+    (0.43, 0.44, 0.43),
+    roughness=0.82
+)
+
+MAT_DARK_CONCRETE = material(
+    "Dark Concrete",
+    (0.11, 0.12, 0.13),
+    roughness=0.76
+)
+
+MAT_ASPHALT = material(
+    "Road Asphalt",
+    (0.028, 0.031, 0.035),
+    roughness=0.95
+)
+
+MAT_FOOTPATH = material(
+    "Footpath Concrete",
+    (0.52, 0.51, 0.48),
     roughness=0.86
 )
 
-MAT_DARK_CONCRETE = make_material(
-    "Dark Concrete",
-    (0.12, 0.13, 0.14),
-    roughness=0.80
+MAT_GLASS = material(
+    "Commercial Blue Glass",
+    (0.025, 0.075, 0.12),
+    roughness=0.10,
+    transmission=0.82
 )
 
-MAT_GLASS = make_material(
-    "Office Glass",
-    (0.05, 0.14, 0.20),
-    roughness=0.12,
-    transmission=0.60
+MAT_CONTEXT_GLASS = material(
+    "Context Glass",
+    (0.025, 0.055, 0.08),
+    roughness=0.16,
+    transmission=0.62
 )
 
-MAT_ALUMINIUM = make_material(
-    "Black Aluminium",
-    (0.018, 0.020, 0.024),
-    metallic=0.82,
-    roughness=0.23
-)
-
-MAT_WHITE = make_material(
-    "Office White",
-    (0.82, 0.82, 0.80),
-    roughness=0.72
-)
-
-MAT_TIMBER = make_material(
-    "Timber",
-    (0.40, 0.21, 0.08),
-    roughness=0.50
-)
-
-MAT_BLACK = make_material(
-    "Black",
-    (0.02, 0.022, 0.025),
-    roughness=0.62
-)
-
-MAT_STAINLESS = make_material(
-    "Stainless",
-    (0.48, 0.50, 0.52),
-    metallic=0.92,
+MAT_ALUMINIUM = material(
+    "Charcoal Aluminium",
+    (0.012, 0.016, 0.018),
+    metallic=0.88,
     roughness=0.22
 )
 
-MAT_ROAD = make_material(
-    "Asphalt",
-    (0.045, 0.048, 0.052),
-    roughness=0.96
+MAT_SPANDREL = material(
+    "Dark Spandrel",
+    (0.055, 0.065, 0.072),
+    metallic=0.28,
+    roughness=0.40
 )
 
-MAT_LINE = make_material(
-    "Road Line",
-    (0.93, 0.90, 0.70),
-    roughness=0.60
+MAT_WHITE = material(
+    "Interior White",
+    (0.82, 0.82, 0.79),
+    roughness=0.72
 )
 
-MAT_RED = make_material(
-    "Crane Red",
-    (0.72, 0.035, 0.025),
-    roughness=0.35
-)
-
-MAT_TRUCK_WHITE = make_material(
-    "Truck White",
-    (0.86, 0.87, 0.85),
-    roughness=0.34
-)
-
-MAT_TRUCK_METAL = make_material(
-    "Truck Metal",
-    (0.48, 0.50, 0.52),
-    metallic=0.80,
-    roughness=0.28
-)
-
-MAT_TRUCK_GLASS = make_material(
-    "Truck Glass",
-    (0.04, 0.09, 0.12),
-    roughness=0.10,
-    transmission=0.50
-)
-
-MAT_STAIR = make_material(
-    "Stair Steel",
-    (0.17, 0.19, 0.20),
-    metallic=0.80,
-    roughness=0.30
-)
-
-MAT_STRAP = make_material(
-    "Cargo Strap",
-    (0.90, 0.22, 0.02),
+MAT_TIMBER = material(
+    "Warm Timber",
+    (0.37, 0.16, 0.04),
     roughness=0.48
 )
 
-MAT_FIRE = make_material(
-    "Fire Pipe",
-    (0.62, 0.02, 0.015),
-    roughness=0.38
+MAT_STAINLESS = material(
+    "Lift Stainless",
+    (0.53, 0.55, 0.57),
+    metallic=0.94,
+    roughness=0.20
 )
 
-MAT_WATER = make_material(
-    "Water Pipe",
-    (0.02, 0.16, 0.43),
-    roughness=0.38
+MAT_BLACK = material(
+    "Black",
+    (0.012, 0.015, 0.018),
+    metallic=0.35,
+    roughness=0.42
 )
 
-MAT_DRAIN = make_material(
-    "Drain Pipe",
-    (0.14, 0.15, 0.16),
-    roughness=0.45
-)
-
-MAT_YELLOW = make_material(
+MAT_YELLOW = material(
     "Safety Yellow",
-    (0.90, 0.62, 0.01),
+    (0.95, 0.58, 0.01),
     roughness=0.45
+)
+
+MAT_WHITE_LINE = material(
+    "Road White",
+    (0.90, 0.89, 0.79),
+    roughness=0.60
+)
+
+MAT_FIRE = material(
+    "Fire Pipe Red",
+    (0.62, 0.015, 0.01),
+    metallic=0.20,
+    roughness=0.34
+)
+
+MAT_WATER = material(
+    "Water Pipe Blue",
+    (0.015, 0.11, 0.44),
+    metallic=0.20,
+    roughness=0.34
+)
+
+MAT_DRAIN = material(
+    "Drainage Grey",
+    (0.10, 0.11, 0.12),
+    roughness=0.48
+)
+
+MAT_TREE_TRUNK = material(
+    "Tree Bark",
+    (0.19, 0.085, 0.025),
+    roughness=0.92
+)
+
+MAT_TREE_LEAF = material(
+    "Tree Leaves",
+    (0.055, 0.20, 0.045),
+    roughness=0.88
+)
+
+MAT_SOIL = material(
+    "Landscape Soil",
+    (0.08, 0.035, 0.012),
+    roughness=0.95
+)
+
+MAT_CONTEXT_DARK = material(
+    "Context Dark",
+    (0.09, 0.105, 0.115),
+    metallic=0.22,
+    roughness=0.44
+)
+
+MAT_CONTEXT_LIGHT = material(
+    "Context Light",
+    (0.39, 0.40, 0.39),
+    roughness=0.72
 )
 
 
 # ============================================================
-# BASIC FUNCTIONS
+# 12 - BASIC BOX
 # ============================================================
-
-def move_to_collection(
-    obj,
-    collection
-):
-
-    for old in list(obj.users_collection):
-
-        old.objects.unlink(obj)
-
-    collection.objects.link(obj)
-
 
 def box(
     name,
     dimensions,
     location,
-    material,
+    mat,
     collection,
-    rotation=(0, 0, 0),
-    parent=None
+    rotation=(0, 0, 0)
 ):
 
     bpy.ops.mesh.primitive_cube_add(
@@ -455,8 +564,8 @@ def box(
     obj = bpy.context.object
 
     obj.name = name
-
     obj.dimensions = dimensions
+
 
     bpy.ops.object.transform_apply(
         location=False,
@@ -464,72 +573,25 @@ def box(
         scale=True
     )
 
-    if material:
+
+    if mat:
 
         obj.data.materials.append(
-            material
+            mat
         )
 
-    move_to_collection(
-        obj,
-        collection
-    )
 
-    if parent:
+    for old in list(
+        obj.users_collection
+    ):
 
-        obj.parent = parent
-
-    return obj
-
-
-# ============================================================
-# BEAM BETWEEN TWO POINTS
-# ============================================================
-
-def beam_between(
-    name,
-    p1,
-    p2,
-    width,
-    height,
-    material,
-    collection,
-    parent=None
-):
-
-    p1 = Vector(p1)
-    p2 = Vector(p2)
-
-    direction = p2 - p1
-
-    length = direction.length
-
-    centre = (
-        p1 + p2
-    ) / 2
-
-
-    obj = box(
-        name,
-        (
-            length,
-            width,
-            height
-        ),
-        centre,
-        material,
-        collection,
-        parent=parent
-    )
-
-
-    obj.rotation_mode = 'QUATERNION'
-
-    obj.rotation_quaternion = (
-        direction.to_track_quat(
-            'X',
-            'Z'
+        old.objects.unlink(
+            obj
         )
+
+
+    collection.objects.link(
+        obj
     )
 
 
@@ -537,7 +599,7 @@ def beam_between(
 
 
 # ============================================================
-# PIPE
+# 13 - PIPE
 # ============================================================
 
 def create_pipe(
@@ -545,7 +607,7 @@ def create_pipe(
     p1,
     p2,
     radius,
-    material
+    mat
 ):
 
     p1 = Vector(p1)
@@ -576,6 +638,7 @@ def create_pipe(
 
     obj.name = name
 
+
     obj.rotation_euler = (
         direction.to_track_quat(
             'Z',
@@ -585,137 +648,21 @@ def create_pipe(
 
 
     obj.data.materials.append(
-        material
+        mat
     )
 
 
-    move_to_collection(
-        obj,
-        COL_SERVICES
-    )
+    for old in list(
+        obj.users_collection
+    ):
 
-
-# ============================================================
-# SLOPED PRISM
-# Proper ramp mesh.
-# ============================================================
-
-def sloped_prism(
-    name,
-    x_center,
-    width,
-    y_start,
-    y_end,
-    z_start,
-    z_end,
-    thickness,
-    material,
-    collection
-):
-
-    x1 = (
-        x_center
-        - width / 2
-    )
-
-    x2 = (
-        x_center
-        + width / 2
-    )
-
-
-    verts = [
-
-        (
-            x1,
-            y_start,
-            z_start
-        ),
-
-        (
-            x2,
-            y_start,
-            z_start
-        ),
-
-        (
-            x2,
-            y_end,
-            z_end
-        ),
-
-        (
-            x1,
-            y_end,
-            z_end
-        ),
-
-        (
-            x1,
-            y_start,
-            z_start - thickness
-        ),
-
-        (
-            x2,
-            y_start,
-            z_start - thickness
-        ),
-
-        (
-            x2,
-            y_end,
-            z_end - thickness
-        ),
-
-        (
-            x1,
-            y_end,
-            z_end - thickness
+        old.objects.unlink(
+            obj
         )
-    ]
 
 
-    faces = [
-
-        (0, 1, 2, 3),
-
-        (4, 7, 6, 5),
-
-        (0, 4, 5, 1),
-
-        (1, 5, 6, 2),
-
-        (2, 6, 7, 3),
-
-        (3, 7, 4, 0)
-    ]
-
-
-    mesh = bpy.data.meshes.new(
-        name + "_Mesh"
-    )
-
-    mesh.from_pydata(
-        verts,
-        [],
-        faces
-    )
-
-    mesh.update()
-
-
-    obj = bpy.data.objects.new(
-        name,
-        mesh
-    )
-
-    collection.objects.link(
+    COL_SERVICES.objects.link(
         obj
-    )
-
-    obj.data.materials.append(
-        material
     )
 
 
@@ -723,15 +670,17 @@ def sloped_prism(
 
 
 # ============================================================
-# CLEAN SLAB WITH RECTANGULAR OPENINGS
-# NO BOOLEAN
+# 14 - SLAB GENERATOR WITH REAL OPENINGS
+#
+# IMPORTANT:
+# This does NOT create slab inside any hole.
 # ============================================================
 
 def create_slab(
     name,
     z_top,
     holes,
-    material,
+    mat,
     collection
 ):
 
@@ -770,6 +719,7 @@ def create_slab(
 
         hx1, hx2, hy1, hy2 = hole
 
+
         hx1 = max(
             hx1,
             x_min
@@ -806,12 +756,14 @@ def create_slab(
                 )
             )
 
+
             xs.extend(
                 [
                     hx1,
                     hx2
                 ]
             )
+
 
             ys.extend(
                 [
@@ -830,7 +782,7 @@ def create_slab(
     )
 
 
-    counter = 1
+    count = 1
 
 
     for i in range(
@@ -840,7 +792,6 @@ def create_slab(
         for j in range(
             len(ys) - 1
         ):
-
 
             xa = xs[i]
             xb = xs[i + 1]
@@ -867,7 +818,7 @@ def create_slab(
             ) / 2
 
 
-            inside = False
+            inside_hole = False
 
 
             for (
@@ -877,25 +828,24 @@ def create_slab(
                 hy2
             ) in valid_holes:
 
-
                 if (
                     hx1 < cx < hx2
                     and
                     hy1 < cy < hy2
                 ):
 
-                    inside = True
+                    inside_hole = True
 
                     break
 
 
-            if inside:
+            if inside_hole:
 
                 continue
 
 
             box(
-                f"{name}_{counter:02d}",
+                f"{name}_{count:02d}",
 
                 (
                     xb - xa,
@@ -910,117 +860,560 @@ def create_slab(
                     - SLAB_THICKNESS / 2
                 ),
 
-                material,
+                mat,
                 collection
             )
 
 
-            counter += 1
+            count += 1
 
 
 # ============================================================
-# STREET
+# 15 - PROFILE PRISM
+# Used for ramp + kerbs
+# ============================================================
+
+def create_profile_prism(
+    name,
+    x_center,
+    width,
+    stations,
+    thickness,
+    mat,
+    collection
+):
+
+    half = (
+        width / 2
+    )
+
+
+    verts = []
+
+
+    # top
+
+    for y, z in stations:
+
+        verts.append(
+            (
+                x_center - half,
+                y,
+                z
+            )
+        )
+
+        verts.append(
+            (
+                x_center + half,
+                y,
+                z
+            )
+        )
+
+
+    # underside
+
+    for y, z in stations:
+
+        verts.append(
+            (
+                x_center - half,
+                y,
+                z - thickness
+            )
+        )
+
+        verts.append(
+            (
+                x_center + half,
+                y,
+                z - thickness
+            )
+        )
+
+
+    n = len(stations)
+
+    faces = []
+
+
+    for i in range(
+        n - 1
+    ):
+
+        a = i * 2
+        b = a + 1
+
+        d = (
+            (i + 1) * 2
+        )
+
+        c = d + 1
+
+
+        faces.append(
+            (
+                a,
+                b,
+                c,
+                d
+            )
+        )
+
+
+        ua = n * 2 + a
+        ub = n * 2 + b
+        uc = n * 2 + c
+        ud = n * 2 + d
+
+
+        faces.append(
+            (
+                ua,
+                ud,
+                uc,
+                ub
+            )
+        )
+
+
+        faces.append(
+            (
+                a,
+                d,
+                ud,
+                ua
+            )
+        )
+
+
+        faces.append(
+            (
+                b,
+                ub,
+                uc,
+                c
+            )
+        )
+
+
+    faces.append(
+        (
+            0,
+            n * 2,
+            n * 2 + 1,
+            1
+        )
+    )
+
+
+    last_left = (
+        (n - 1) * 2
+    )
+
+    last_right = (
+        last_left + 1
+    )
+
+
+    faces.append(
+        (
+            last_left,
+            last_right,
+            n * 2 + last_right,
+            n * 2 + last_left
+        )
+    )
+
+
+    mesh = bpy.data.meshes.new(
+        name + "_Mesh"
+    )
+
+
+    mesh.from_pydata(
+        verts,
+        [],
+        faces
+    )
+
+
+    mesh.update()
+
+
+    obj = bpy.data.objects.new(
+        name,
+        mesh
+    )
+
+
+    collection.objects.link(
+        obj
+    )
+
+
+    obj.data.materials.append(
+        mat
+    )
+
+
+    return obj
+
+
+# ============================================================
+# 16 - VARIABLE SIDE WALL
+# Bottom follows ramp exactly.
+# ============================================================
+
+def create_ramp_wall(
+    name,
+    x_center,
+    width,
+    stations,
+    wall_height,
+    mat
+):
+
+    half = (
+        width / 2
+    )
+
+
+    verts = []
+
+
+    for y, base_z in stations:
+
+        verts.append(
+            (
+                x_center - half,
+                y,
+                base_z
+            )
+        )
+
+        verts.append(
+            (
+                x_center + half,
+                y,
+                base_z
+            )
+        )
+
+
+        verts.append(
+            (
+                x_center - half,
+                y,
+                base_z + wall_height
+            )
+        )
+
+        verts.append(
+            (
+                x_center + half,
+                y,
+                base_z + wall_height
+            )
+        )
+
+
+    faces = []
+
+
+    n = len(stations)
+
+
+    for i in range(
+        n - 1
+    ):
+
+        a = i * 4
+        b = (
+            (i + 1) * 4
+        )
+
+
+        # outer face
+
+        faces.append(
+            (
+                a,
+                b,
+                b + 2,
+                a + 2
+            )
+        )
+
+
+        # inner face
+
+        faces.append(
+            (
+                a + 1,
+                a + 3,
+                b + 3,
+                b + 1
+            )
+        )
+
+
+        # top
+
+        faces.append(
+            (
+                a + 2,
+                b + 2,
+                b + 3,
+                a + 3
+            )
+        )
+
+
+        # bottom
+
+        faces.append(
+            (
+                a,
+                a + 1,
+                b + 1,
+                b
+            )
+        )
+
+
+    mesh = bpy.data.meshes.new(
+        name + "_Mesh"
+    )
+
+
+    mesh.from_pydata(
+        verts,
+        [],
+        faces
+    )
+
+
+    mesh.update()
+
+
+    obj = bpy.data.objects.new(
+        name,
+        mesh
+    )
+
+
+    COL_RAMP.objects.link(
+        obj
+    )
+
+
+    obj.data.materials.append(
+        mat
+    )
+
+
+    return obj
+
+
+# ============================================================
+# 17 - LEVELS
+# ============================================================
+
+LEVELS = [
+    0.0
+]
+
+current = 0.0
+
+
+for level in range(
+    LEVEL_COUNT
+):
+
+    if level == 0:
+
+        current += GROUND_HEIGHT
+
+    else:
+
+        current += TYPICAL_HEIGHT
+
+
+    LEVELS.append(
+        current
+    )
+
+
+BUILDING_HEIGHT = (
+    LEVELS[-1]
+)
+
+
+# ============================================================
+# 18 - RAMP PROFILE
+# ============================================================
+
+RAMP_PROFILE = [
+
+    (
+        RAMP_START_Y,
+        0.0
+    ),
+
+    (
+        TOP_TRANSITION_END_Y,
+        MAIN_RAMP_START_Z
+    ),
+
+    (
+        MAIN_RAMP_END_Y,
+        MAIN_RAMP_END_Z
+    ),
+
+    (
+        RAMP_END_Y,
+        BASEMENT_Z
+    )
+]
+
+
+# ============================================================
+# 19 - STREET
 # ============================================================
 
 box(
-    "City Road",
+    "City Road Asphalt",
 
     (
         ROAD_LENGTH,
         ROAD_WIDTH,
-        0.18
+        0.20
     ),
 
     (
         0,
         ROAD_CENTER_Y,
-        -0.10
+        -0.11
     ),
 
-    MAT_ROAD,
-    COL_CITY
+    MAT_ASPHALT,
+    COL_SITE
 )
 
 
-box(
-    "Footpath",
-
-    (
-        ROAD_LENGTH,
-        FOOTPATH_WIDTH,
-        0.16
-    ),
-
-    (
-        0,
-        FOOTPATH_Y,
-        -0.02
-    ),
-
-    MAT_CONCRETE,
-    COL_CITY
-)
-
-
-# road dashes
+# ============================================================
+# 20 - ROAD LINES
+# ============================================================
 
 for x in range(
-    -50,
-    51,
+    -58,
+    59,
     9
 ):
 
     box(
-        "Road Dash",
+        "Road Centre Dash",
 
         (
-            3.0,
-            0.16,
-            0.02
+            3.2,
+            0.14,
+            0.018
         ),
 
         (
             x,
             ROAD_CENTER_Y,
-            0.01
+            0.005
         ),
 
-        MAT_LINE,
-        COL_CITY
+        MAT_WHITE_LINE,
+        COL_SITE
     )
 
 
 # ============================================================
-# GARAGE CROSSOVER
+# 21 - NEAR FOOTPATH
 # ============================================================
 
 box(
-    "Garage Crossover",
+    "Near Footpath",
 
     (
-        GARAGE_ZONE_WIDTH,
-        5.0,
+        ROAD_LENGTH,
+        NEAR_FOOTPATH_WIDTH,
+        0.16
+    ),
+
+    (
+        0,
+        NEAR_FOOTPATH_Y,
+        0.0
+    ),
+
+    MAT_FOOTPATH,
+    COL_SITE
+)
+
+
+# ============================================================
+# 22 - OPPOSITE FOOTPATH
+# ============================================================
+
+box(
+    "Opposite Footpath",
+
+    (
+        ROAD_LENGTH,
+        4.0,
+        0.16
+    ),
+
+    (
+        0,
+        OPPOSITE_FOOTPATH_Y,
+        0.0
+    ),
+
+    MAT_FOOTPATH,
+    COL_SITE
+)
+
+
+# ============================================================
+# 23 - DRIVEWAY CROSSOVER
+# ============================================================
+
+box(
+    "Garage Driveway Crossover",
+
+    (
+        GARAGE_PORTAL_WIDTH,
+        6.0,
         0.18
     ),
 
     (
         GARAGE_X,
         FRONT_Y - 2.0,
-        0.0
+        0.02
     ),
 
     MAT_CONCRETE,
-    COL_GARAGE
+    COL_RAMP
 )
 
 
-# flat entry
+# ============================================================
+# 24 - GARAGE ENTRY FLAT
+# ============================================================
 
 box(
-    "Garage Flat Entry",
+    "Garage Entry Flat",
 
     (
-        GARAGE_ZONE_WIDTH,
+        GARAGE_RAMP_WIDTH,
         ENTRY_FLAT_LENGTH,
         0.20
     ),
@@ -1035,105 +1428,199 @@ box(
     ),
 
     MAT_CONCRETE,
-    COL_GARAGE
+    COL_RAMP
 )
 
 
 # ============================================================
-# RAMP
+# 25 - TRENCH DRAIN
 # ============================================================
 
-sloped_prism(
-    "Main Ramp",
+box(
+    "Garage Trench Drain",
+
+    (
+        GARAGE_RAMP_WIDTH - 0.20,
+        0.32,
+        0.06
+    ),
+
+    (
+        GARAGE_X,
+        RAMP_START_Y - 0.35,
+        0.035
+    ),
+
+    MAT_BLACK,
+    COL_RAMP
+)
+
+
+for x in [
+    GARAGE_X - 2.5,
+    GARAGE_X - 1.5,
+    GARAGE_X - 0.5,
+    GARAGE_X + 0.5,
+    GARAGE_X + 1.5,
+    GARAGE_X + 2.5
+]:
+
+    box(
+        "Drain Grate",
+
+        (
+            0.72,
+            0.33,
+            0.018
+        ),
+
+        (
+            x,
+            RAMP_START_Y - 0.35,
+            0.075
+        ),
+
+        MAT_STAINLESS,
+        COL_RAMP
+    )
+
+
+# ============================================================
+# 26 - MAIN RAMP
+# ============================================================
+
+create_profile_prism(
+    "Garage Ramp Slab",
 
     GARAGE_X,
+    GARAGE_RAMP_WIDTH,
 
-    GARAGE_ZONE_WIDTH,
-
-    RAMP_START_Y,
-    RAMP_END_Y,
-
-    0.0,
-    BASEMENT_Z,
+    RAMP_PROFILE,
 
     RAMP_THICKNESS,
 
     MAT_CONCRETE,
-    COL_GARAGE
+    COL_RAMP
 )
 
 
-# side retaining walls
+# ============================================================
+# 27 - RAMP KERBS
+# ============================================================
+
+kerb_profile = [
+
+    (
+        y,
+        z + RAMP_KERB_HEIGHT
+    )
+
+    for y, z in RAMP_PROFILE
+]
+
 
 for side in [
     -1,
     1
 ]:
 
-    x = (
+    kerb_x = (
+
         GARAGE_X
+
         + side
-        * GARAGE_ZONE_WIDTH / 2
+        * (
+            GARAGE_RAMP_WIDTH / 2
+            - RAMP_KERB_WIDTH / 2
+        )
     )
 
 
-    sloped_prism(
-        "Ramp Side Wall",
+    create_profile_prism(
+        "Ramp Kerb",
 
-        x,
+        kerb_x,
+        RAMP_KERB_WIDTH,
 
-        0.20,
+        kerb_profile,
 
-        RAMP_START_Y,
-        RAMP_END_Y,
+        RAMP_KERB_HEIGHT,
 
-        RAMP_SIDE_WALL_HEIGHT,
-
-        BASEMENT_Z
-        + RAMP_SIDE_WALL_HEIGHT,
-
-        RAMP_SIDE_WALL_HEIGHT,
-
-        MAT_CONCRETE,
-        COL_GARAGE
+        MAT_DARK_CONCRETE,
+        COL_RAMP
     )
 
 
 # ============================================================
-# BOTTOM LANDING
+# 28 - RAMP RETAINING WALLS
+# ============================================================
+
+for side in [
+    -1,
+    1
+]:
+
+    wall_x = (
+
+        GARAGE_X
+
+        + side
+        * (
+            GARAGE_RAMP_WIDTH / 2
+            + RAMP_WALL_THICKNESS / 2
+        )
+    )
+
+
+    create_ramp_wall(
+        "Ramp Retaining Wall",
+
+        wall_x,
+
+        RAMP_WALL_THICKNESS,
+
+        RAMP_PROFILE,
+
+        RAMP_WALL_HEIGHT,
+
+        MAT_CONCRETE
+    )
+
+
+# ============================================================
+# 29 - B1 RAMP LANDING
 # ============================================================
 
 box(
     "B1 Ramp Landing",
 
     (
-        GARAGE_ZONE_WIDTH,
-        5.0,
-        0.20
+        GARAGE_RAMP_WIDTH,
+        B1_LANDING_LENGTH,
+        0.22
     ),
 
     (
         GARAGE_X,
 
-        RAMP_END_Y + 2.5,
+        RAMP_END_Y
+        + B1_LANDING_LENGTH / 2,
 
-        BASEMENT_Z - 0.10
+        BASEMENT_Z - 0.11
     ),
 
     MAT_CONCRETE,
-    COL_GARAGE
+    COL_RAMP
 )
 
 
 # ============================================================
-# GARAGE PORTAL
+# 30 - GARAGE PORTAL
 # ============================================================
 
-PIER_W = 0.35
-
-PORTAL_DEPTH = 0.50
-
-HEADER_H = 0.40
+PORTAL_PIER_WIDTH = 0.40
+PORTAL_DEPTH = 0.65
+PORTAL_HEADER_H = 0.45
 
 
 for side in [
@@ -1145,85 +1632,82 @@ for side in [
         "Garage Portal Pier",
 
         (
-            PIER_W,
+            PORTAL_PIER_WIDTH,
             PORTAL_DEPTH,
 
             GARAGE_CLEAR_HEIGHT
-            + HEADER_H
+            + PORTAL_HEADER_H
         ),
 
         (
             GARAGE_X
+
             + side
             * (
                 GARAGE_CLEAR_WIDTH / 2
-                + PIER_W / 2
+                + PORTAL_PIER_WIDTH / 2
             ),
 
             FRONT_Y,
 
             (
                 GARAGE_CLEAR_HEIGHT
-                + HEADER_H
+                + PORTAL_HEADER_H
             ) / 2
         ),
 
         MAT_DARK_CONCRETE,
-        COL_GARAGE
+        COL_RAMP
     )
 
 
 box(
-    "Garage Header",
+    "Garage Portal Header",
 
     (
         GARAGE_CLEAR_WIDTH
-        + PIER_W * 2,
+        + PORTAL_PIER_WIDTH * 2,
 
         PORTAL_DEPTH,
 
-        HEADER_H
+        PORTAL_HEADER_H
     ),
 
     (
         GARAGE_X,
-
         FRONT_Y,
 
         GARAGE_CLEAR_HEIGHT
-        + HEADER_H / 2
+        + PORTAL_HEADER_H / 2
     ),
 
     MAT_DARK_CONCRETE,
-    COL_GARAGE
+    COL_RAMP
 )
 
 
 box(
-    "Clearance Sign",
+    "Maximum Clearance Bar",
 
     (
-        3.2,
-        0.12,
-        0.25
+        3.40,
+        0.10,
+        0.18
     ),
 
     (
         GARAGE_X,
-
-        FRONT_Y - 0.30,
-
-        GARAGE_CLEAR_HEIGHT
-        - 0.20
+        FRONT_Y - 0.45,
+        GARAGE_CLEAR_HEIGHT - 0.25
     ),
 
     MAT_YELLOW,
-    COL_GARAGE
+    COL_RAMP
 )
 
 
 # ============================================================
-# LIFT OPENING
+# 31 - LIFT HOLE
 # ============================================================
 
 LIFT_HOLE = (
@@ -1243,11 +1727,43 @@ LIFT_HOLE = (
 
 
 # ============================================================
-# BASEMENT FLOOR
+# 32 - RAMP VOID
+#
+# CRITICAL SECTION
+#
+# This void covers the COMPLETE descending ramp.
+#
+# Ground floor slab WILL NOT be created inside here.
+# ============================================================
+
+RAMP_VOID_MARGIN_X = 0.35
+
+RAMP_VOID_MARGIN_Y = 0.60
+
+
+RAMP_HOLE = (
+
+    GARAGE_X
+    - GARAGE_RAMP_WIDTH / 2
+    - RAMP_VOID_MARGIN_X,
+
+    GARAGE_X
+    + GARAGE_RAMP_WIDTH / 2
+    + RAMP_VOID_MARGIN_X,
+
+    FRONT_Y - 0.20,
+
+    RAMP_END_Y
+    + RAMP_VOID_MARGIN_Y
+)
+
+
+# ============================================================
+# 33 - BASEMENT FLOOR
 # ============================================================
 
 create_slab(
-    "B1_Floor",
+    "B1 Floor",
 
     BASEMENT_Z,
 
@@ -1261,15 +1777,83 @@ create_slab(
 
 
 # ============================================================
-# BASEMENT WALLS
+# 34 - GROUND FLOOR SLAB
+#
+# IMPORTANT:
+# RAMP_HOLE IS EXCLUDED.
+#
+# NO SLAB ABOVE RAMP.
 # ============================================================
 
-B1_HEIGHT = abs(
-    BASEMENT_Z
+create_slab(
+    "Ground Floor Slab",
+
+    0.0,
+
+    [
+        LIFT_HOLE,
+        RAMP_HOLE
+    ],
+
+    MAT_CONCRETE,
+    COL_STRUCTURE
 )
 
 
-# north
+# ============================================================
+# 35 - UPPER FLOOR SLABS
+#
+# These start at RL +4.5m.
+# They do NOT represent the Ground Floor slab.
+# ============================================================
+
+for level in range(
+    1,
+    LEVEL_COUNT
+):
+
+    create_slab(
+        f"Level {level:02d} Slab",
+
+        LEVELS[level],
+
+        [
+            LIFT_HOLE
+        ],
+
+        MAT_CONCRETE,
+        COL_STRUCTURE
+    )
+
+
+# ============================================================
+# 36 - ROOF
+# ============================================================
+
+create_slab(
+    "Roof Slab",
+
+    BUILDING_HEIGHT,
+
+    [
+        LIFT_HOLE
+    ],
+
+    MAT_CONCRETE,
+    COL_STRUCTURE
+)
+
+
+# ============================================================
+# 37 - BASEMENT PERIMETER WALLS
+# ============================================================
+
+B1_HEIGHT = (
+    abs(
+        BASEMENT_Z
+    )
+)
+
 
 box(
     "B1 North Wall",
@@ -1282,7 +1866,7 @@ box(
 
     (
         0,
-        BUILDING_DEPTH / 2,
+        BACK_Y,
         BASEMENT_Z / 2
     ),
 
@@ -1290,8 +1874,6 @@ box(
     COL_BASEMENT
 )
 
-
-# west
 
 box(
     "B1 West Wall",
@@ -1312,8 +1894,6 @@ box(
     COL_BASEMENT
 )
 
-
-# east
 
 box(
     "B1 East Wall",
@@ -1336,119 +1916,7 @@ box(
 
 
 # ============================================================
-# LEVEL HEIGHTS
-# ============================================================
-
-LEVELS = [
-    0.0
-]
-
-current = 0.0
-
-
-for level in range(
-    LEVEL_COUNT
-):
-
-    if level == 0:
-
-        current += (
-            GROUND_HEIGHT
-        )
-
-    else:
-
-        current += (
-            TYPICAL_HEIGHT
-        )
-
-
-    LEVELS.append(
-        current
-    )
-
-
-BUILDING_HEIGHT = (
-    LEVELS[-1]
-)
-
-
-# ============================================================
-# GROUND SLAB
-# ============================================================
-
-RAMP_HOLE = (
-
-    GARAGE_X
-    - GARAGE_ZONE_WIDTH / 2
-    - 0.20,
-
-    GARAGE_X
-    + GARAGE_ZONE_WIDTH / 2
-    + 0.20,
-
-    FRONT_Y,
-
-    RAMP_END_Y + 0.30
-)
-
-
-create_slab(
-    "Ground_Slab",
-
-    0.0,
-
-    [
-        LIFT_HOLE,
-        RAMP_HOLE
-    ],
-
-    MAT_CONCRETE,
-    COL_STRUCTURE
-)
-
-
-# ============================================================
-# UPPER SLABS
-# ============================================================
-
-for level in range(
-    1,
-    LEVEL_COUNT
-):
-
-    create_slab(
-        f"L{level:02d}_Slab",
-
-        LEVELS[level],
-
-        [
-            LIFT_HOLE
-        ],
-
-        MAT_CONCRETE,
-        COL_STRUCTURE
-    )
-
-
-# roof
-
-create_slab(
-    "Roof_Slab",
-
-    BUILDING_HEIGHT,
-
-    [
-        LIFT_HOLE
-    ],
-
-    MAT_CONCRETE,
-    COL_STRUCTURE
-)
-
-
-# ============================================================
-# COLUMNS
+# 38 - STRUCTURAL COLUMNS
 # ============================================================
 
 GRID_X = [
@@ -1473,10 +1941,9 @@ for level in range(
 ):
 
     z0 = LEVELS[level]
-
     z1 = LEVELS[level + 1]
 
-    h = (
+    height = (
         z1 - z0
     )
 
@@ -1485,26 +1952,41 @@ for level in range(
 
         for y in GRID_Y:
 
+            # ------------------------------------------------
+            # NO COLUMNS INSIDE RAMP / RAMP VOID
+            # ------------------------------------------------
 
-            # avoid ramp
             if (
                 abs(
                     x - GARAGE_X
-                ) < 4.2
+                )
+                <
+                GARAGE_RAMP_WIDTH / 2
+                + 1.0
+
                 and
-                FRONT_Y < y
-                < RAMP_END_Y + 2
+
+                FRONT_Y - 1.0
+                <
+                y
+                <
+                RAMP_END_Y + 3.0
             ):
 
                 continue
 
 
-            # avoid lift
+            # ------------------------------------------------
+            # NO COLUMN INSIDE LIFT
+            # ------------------------------------------------
+
             if (
                 abs(
                     x - LIFT_X
                 ) < 2.3
+
                 and
+
                 abs(
                     y - LIFT_Y
                 ) < 2.3
@@ -1514,18 +1996,18 @@ for level in range(
 
 
             box(
-                "Column",
+                "RC Column",
 
                 (
-                    0.50,
-                    0.50,
-                    h
+                    0.52,
+                    0.52,
+                    height
                 ),
 
                 (
                     x,
                     y,
-                    z0 + h / 2
+                    z0 + height / 2
                 ),
 
                 MAT_DARK_CONCRETE,
@@ -1534,7 +2016,386 @@ for level in range(
 
 
 # ============================================================
-# LIFT SHAFT
+# 39 - GROUND FLOOR EXTERNAL WALLS
+# ============================================================
+
+WALL_THICKNESS = 0.25
+
+GF_WALL_HEIGHT = (
+    GROUND_HEIGHT - 0.30
+)
+
+GF_WALL_Z = (
+    GF_WALL_HEIGHT / 2
+)
+
+
+GARAGE_LEFT = (
+    GARAGE_X
+    - GARAGE_PORTAL_WIDTH / 2
+)
+
+GARAGE_RIGHT = (
+    GARAGE_X
+    + GARAGE_PORTAL_WIDTH / 2
+)
+
+
+BUILDING_LEFT = (
+    -BUILDING_WIDTH / 2
+)
+
+BUILDING_RIGHT = (
+    BUILDING_WIDTH / 2
+)
+
+
+# ============================================================
+# 40 - FRONT WALL LEFT OF ENTRY
+# ============================================================
+
+width = (
+    ENTRY_LEFT
+    - BUILDING_LEFT
+)
+
+
+box(
+    "GF Front Wall Left",
+
+    (
+        width,
+        WALL_THICKNESS,
+        GF_WALL_HEIGHT
+    ),
+
+    (
+        BUILDING_LEFT
+        + width / 2,
+
+        FRONT_Y
+        + WALL_THICKNESS / 2,
+
+        GF_WALL_Z
+    ),
+
+    MAT_DARK_CONCRETE,
+    COL_FACADE
+)
+
+
+# ============================================================
+# 41 - FRONT WALL ENTRY -> GARAGE
+# ============================================================
+
+width = (
+    GARAGE_LEFT
+    - ENTRY_RIGHT
+)
+
+
+box(
+    "GF Front Wall Middle",
+
+    (
+        width,
+        WALL_THICKNESS,
+        GF_WALL_HEIGHT
+    ),
+
+    (
+        ENTRY_RIGHT
+        + width / 2,
+
+        FRONT_Y
+        + WALL_THICKNESS / 2,
+
+        GF_WALL_Z
+    ),
+
+    MAT_DARK_CONCRETE,
+    COL_FACADE
+)
+
+
+# ============================================================
+# 42 - FRONT WALL RIGHT OF GARAGE
+# ============================================================
+
+width = (
+    BUILDING_RIGHT
+    - GARAGE_RIGHT
+)
+
+
+box(
+    "GF Front Wall Right",
+
+    (
+        width,
+        WALL_THICKNESS,
+        GF_WALL_HEIGHT
+    ),
+
+    (
+        GARAGE_RIGHT
+        + width / 2,
+
+        FRONT_Y
+        + WALL_THICKNESS / 2,
+
+        GF_WALL_Z
+    ),
+
+    MAT_DARK_CONCRETE,
+    COL_FACADE
+)
+
+
+# ============================================================
+# 43 - SIDE / REAR WALLS
+# ============================================================
+
+box(
+    "GF West External Wall",
+
+    (
+        WALL_THICKNESS,
+        BUILDING_DEPTH,
+        GF_WALL_HEIGHT
+    ),
+
+    (
+        BUILDING_LEFT
+        + WALL_THICKNESS / 2,
+
+        0,
+
+        GF_WALL_Z
+    ),
+
+    MAT_DARK_CONCRETE,
+    COL_FACADE
+)
+
+
+box(
+    "GF East External Wall",
+
+    (
+        WALL_THICKNESS,
+        BUILDING_DEPTH,
+        GF_WALL_HEIGHT
+    ),
+
+    (
+        BUILDING_RIGHT
+        - WALL_THICKNESS / 2,
+
+        0,
+
+        GF_WALL_Z
+    ),
+
+    MAT_DARK_CONCRETE,
+    COL_FACADE
+)
+
+
+box(
+    "GF Rear External Wall",
+
+    (
+        BUILDING_WIDTH,
+        WALL_THICKNESS,
+        GF_WALL_HEIGHT
+    ),
+
+    (
+        0,
+
+        BACK_Y
+        - WALL_THICKNESS / 2,
+
+        GF_WALL_Z
+    ),
+
+    MAT_DARK_CONCRETE,
+    COL_FACADE
+)
+
+
+# ============================================================
+# 44 - MAIN ENTRY
+# ============================================================
+
+ENTRY_GLASS_HEIGHT = 3.55
+
+
+box(
+    "Main Lobby Entry Glass",
+
+    (
+        ENTRY_WIDTH,
+        0.08,
+        ENTRY_GLASS_HEIGHT
+    ),
+
+    (
+        ENTRY_X,
+
+        FRONT_Y - 0.03,
+
+        ENTRY_GLASS_HEIGHT / 2
+    ),
+
+    MAT_GLASS,
+    COL_FACADE
+)
+
+
+for side in [
+    -1,
+    0,
+    1
+]:
+
+    box(
+        "Lobby Entry Mullion",
+
+        (
+            0.07,
+            0.12,
+            ENTRY_GLASS_HEIGHT
+        ),
+
+        (
+            ENTRY_X
+            + side
+            * ENTRY_WIDTH / 2,
+
+            FRONT_Y - 0.05,
+
+            ENTRY_GLASS_HEIGHT / 2
+        ),
+
+        MAT_ALUMINIUM,
+        COL_FACADE
+    )
+
+
+# canopy
+
+box(
+    "Main Entrance Canopy",
+
+    (
+        ENTRY_WIDTH + 1.20,
+        2.0,
+        0.18
+    ),
+
+    (
+        ENTRY_X,
+        FRONT_Y - 0.85,
+        3.75
+    ),
+
+    MAT_DARK_CONCRETE,
+    COL_FACADE
+)
+
+
+# ============================================================
+# 45 - GROUND FLOOR WINDOWS
+# ============================================================
+
+for y in [
+    -14,
+    -7,
+    0,
+    7,
+    14
+]:
+
+    box(
+        "GF West Window",
+
+        (
+            0.07,
+            4.1,
+            2.35
+        ),
+
+        (
+            BUILDING_LEFT - 0.02,
+            y,
+            2.15
+        ),
+
+        MAT_GLASS,
+        COL_FACADE
+    )
+
+
+for y in [
+    -7,
+    0,
+    7,
+    14
+]:
+
+    box(
+        "GF East Window",
+
+        (
+            0.07,
+            4.1,
+            2.35
+        ),
+
+        (
+            BUILDING_RIGHT + 0.02,
+            y,
+            2.15
+        ),
+
+        MAT_GLASS,
+        COL_FACADE
+    )
+
+
+for x in [
+    -14,
+    -9,
+    -4,
+    1,
+    6,
+    11
+]:
+
+    box(
+        "GF Rear Window",
+
+        (
+            3.5,
+            0.07,
+            2.35
+        ),
+
+        (
+            x,
+            BACK_Y + 0.02,
+            2.15
+        ),
+
+        MAT_GLASS,
+        COL_FACADE
+    )
+
+
+# ============================================================
+# 46 - LIFT PIT
 # ============================================================
 
 PIT_BOTTOM = (
@@ -1542,18 +2403,6 @@ PIT_BOTTOM = (
     - LIFT_PIT_DEPTH
 )
 
-SHAFT_TOP = (
-    BUILDING_HEIGHT
-    + LIFT_OVERRUN
-)
-
-SHAFT_H = (
-    SHAFT_TOP
-    - PIT_BOTTOM
-)
-
-
-# pit base
 
 box(
     "Lift Pit Base",
@@ -1561,7 +2410,7 @@ box(
     (
         SHAFT_WIDTH,
         SHAFT_DEPTH,
-        0.25
+        0.28
     ),
 
     (
@@ -1575,7 +2424,20 @@ box(
 )
 
 
-# side walls
+# ============================================================
+# 47 - LIFT SHAFT
+# ============================================================
+
+SHAFT_TOP = (
+    BUILDING_HEIGHT
+    + LIFT_OVERRUN
+)
+
+SHAFT_HEIGHT = (
+    SHAFT_TOP
+    - PIT_BOTTOM
+)
+
 
 for side in [
     -1,
@@ -1583,16 +2445,17 @@ for side in [
 ]:
 
     box(
-        "Lift Side Wall",
+        "Lift Shaft Side Wall",
 
         (
             SHAFT_WALL,
             SHAFT_DEPTH,
-            SHAFT_H
+            SHAFT_HEIGHT
         ),
 
         (
             LIFT_X
+
             + side
             * (
                 SHAFT_WIDTH / 2
@@ -1602,7 +2465,7 @@ for side in [
             LIFT_Y,
 
             PIT_BOTTOM
-            + SHAFT_H / 2
+            + SHAFT_HEIGHT / 2
         ),
 
         MAT_CONCRETE,
@@ -1610,15 +2473,13 @@ for side in [
     )
 
 
-# rear wall
-
 box(
-    "Lift Rear Wall",
+    "Lift Shaft Rear Wall",
 
     (
         SHAFT_WIDTH,
         SHAFT_WALL,
-        SHAFT_H
+        SHAFT_HEIGHT
     ),
 
     (
@@ -1629,7 +2490,7 @@ box(
         - SHAFT_WALL / 2,
 
         PIT_BOTTOM
-        + SHAFT_H / 2
+        + SHAFT_HEIGHT / 2
     ),
 
     MAT_CONCRETE,
@@ -1638,7 +2499,44 @@ box(
 
 
 # ============================================================
-# LIFT FRONT WALLS / DOORS
+# 48 - LIFT GUIDE RAILS
+# ============================================================
+
+for x_offset in [
+    -0.82,
+    0.82
+]:
+
+    box(
+        "Lift Guide Rail",
+
+        (
+            0.075,
+            0.10,
+
+            BUILDING_HEIGHT
+            - BASEMENT_Z
+            + 1.0
+        ),
+
+        (
+            LIFT_X + x_offset,
+
+            LIFT_Y + 1.25,
+
+            (
+                BUILDING_HEIGHT
+                + BASEMENT_Z
+            ) / 2
+        ),
+
+        MAT_STAINLESS,
+        COL_LIFT
+    )
+
+
+# ============================================================
+# 49 - LIFT DOORS
 # ============================================================
 
 LIFT_FLOORS = (
@@ -1653,8 +2551,7 @@ for index, floor_z in enumerate(
 
     if index == 0:
 
-        next_z = 0
-
+        next_z = 0.0
         label = "B1"
 
     else:
@@ -1666,14 +2563,16 @@ for index, floor_z in enumerate(
         )
 
 
-    storey_h = (
+    storey_height = (
         next_z - floor_z
     )
 
 
-    jamb_w = (
+    jamb_width = (
+
         SHAFT_WIDTH
         - LIFT_DOOR_W
+
     ) / 2
 
 
@@ -1686,17 +2585,18 @@ for index, floor_z in enumerate(
             label + "_Lift_Jamb",
 
             (
-                jamb_w,
+                jamb_width,
                 SHAFT_WALL,
-                storey_h
+                storey_height
             ),
 
             (
                 LIFT_X
+
                 + side
                 * (
                     LIFT_DOOR_W / 2
-                    + jamb_w / 2
+                    + jamb_width / 2
                 ),
 
                 LIFT_Y
@@ -1704,7 +2604,7 @@ for index, floor_z in enumerate(
                 + SHAFT_WALL / 2,
 
                 floor_z
-                + storey_h / 2
+                + storey_height / 2
             ),
 
             MAT_CONCRETE,
@@ -1712,22 +2612,21 @@ for index, floor_z in enumerate(
         )
 
 
-    header_h = (
-        storey_h
+    header_height = (
+        storey_height
         - LIFT_DOOR_H
     )
 
 
-    if header_h > 0:
+    if header_height > 0:
 
         box(
-            label
-            + "_Lift_Header",
+            label + "_Lift_Header",
 
             (
                 LIFT_DOOR_W,
                 SHAFT_WALL,
-                header_h
+                header_height
             ),
 
             (
@@ -1739,7 +2638,7 @@ for index, floor_z in enumerate(
 
                 floor_z
                 + LIFT_DOOR_H
-                + header_h / 2
+                + header_height / 2
             ),
 
             MAT_CONCRETE,
@@ -1747,25 +2646,118 @@ for index, floor_z in enumerate(
         )
 
 
+    # --------------------------------------------------------
+    # DOUBLE SLIDING DOORS
+    # --------------------------------------------------------
+
+    for side in [
+        -1,
+        1
+    ]:
+
+        box(
+            label
+            + f"_Lift_Door_{side}",
+
+            (
+                LIFT_DOOR_W / 2
+                - 0.02,
+
+                0.055,
+
+                LIFT_DOOR_H
+            ),
+
+            (
+                LIFT_X
+
+                + side
+                * LIFT_DOOR_W / 4,
+
+                LIFT_Y
+                - SHAFT_DEPTH / 2
+                - 0.035,
+
+                floor_z
+                + LIFT_DOOR_H / 2
+            ),
+
+            MAT_STAINLESS,
+            COL_LIFT
+        )
+
+
+# ============================================================
+# 50 - LIFT CAR
+# ============================================================
+
+box(
+    "Lift Car Floor",
+
+    (
+        LIFT_CAR_W,
+        LIFT_CAR_D,
+        0.12
+    ),
+
+    (
+        LIFT_X,
+        LIFT_Y,
+        BASEMENT_Z + 0.06
+    ),
+
+    MAT_STAINLESS,
+    COL_LIFT
+)
+
+
+box(
+    "Lift Car Rear Wall",
+
+    (
+        LIFT_CAR_W,
+        0.08,
+        LIFT_CAR_H
+    ),
+
+    (
+        LIFT_X,
+
+        LIFT_Y
+        + LIFT_CAR_D / 2,
+
+        BASEMENT_Z
+        + LIFT_CAR_H / 2
+    ),
+
+    MAT_STAINLESS,
+    COL_LIFT
+)
+
+
+for side in [
+    -1,
+    1
+]:
+
     box(
-        label
-        + "_Lift_Door",
+        "Lift Car Side Wall",
 
         (
-            LIFT_DOOR_W - 0.05,
-            0.06,
-            LIFT_DOOR_H - 0.05
+            0.08,
+            LIFT_CAR_D,
+            LIFT_CAR_H
         ),
 
         (
-            LIFT_X,
+            LIFT_X
+            + side
+            * LIFT_CAR_W / 2,
 
-            LIFT_Y
-            - SHAFT_DEPTH / 2
-            - 0.04,
+            LIFT_Y,
 
-            floor_z
-            + LIFT_DOOR_H / 2
+            BASEMENT_Z
+            + LIFT_CAR_H / 2
         ),
 
         MAT_STAINLESS,
@@ -1773,23 +2765,21 @@ for index, floor_z in enumerate(
     )
 
 
-# ============================================================
-# LIFT CAR
-# ============================================================
-
 box(
-    "Lift Car",
+    "Lift Car Ceiling",
 
     (
-        1.85,
-        1.70,
-        2.45
+        LIFT_CAR_W,
+        LIFT_CAR_D,
+        0.08
     ),
 
     (
         LIFT_X,
-        LIFT_Y + 0.15,
-        BASEMENT_Z + 1.25
+        LIFT_Y,
+
+        BASEMENT_Z
+        + LIFT_CAR_H
     ),
 
     MAT_STAINLESS,
@@ -1798,45 +2788,49 @@ box(
 
 
 # ============================================================
-# FACADE
+# 51 - UPPER CURTAIN WALL
 # ============================================================
 
 for level in range(
+    1,
     LEVEL_COUNT
 ):
 
     z0 = LEVELS[level]
-
     z1 = LEVELS[level + 1]
 
-    clear_h = (
-        z1
-        - z0
-        - 0.35
+    storey_height = (
+        z1 - z0
     )
 
-    zc = (
+
+    glass_height = (
+        storey_height - 0.58
+    )
+
+
+    glass_z = (
         z0
-        + 0.20
-        + clear_h / 2
+        + 0.25
+        + glass_height / 2
     )
 
 
-    # north
+    # front
 
     box(
-        "North Glass",
+        "Front Curtain Glass",
 
         (
             BUILDING_WIDTH,
-            0.10,
-            clear_h
+            0.09,
+            glass_height
         ),
 
         (
             0,
-            BUILDING_DEPTH / 2,
-            zc
+            FRONT_Y,
+            glass_z
         ),
 
         MAT_GLASS,
@@ -1844,21 +2838,21 @@ for level in range(
     )
 
 
-    # east
+    # rear
 
     box(
-        "East Glass",
+        "Rear Curtain Glass",
 
         (
-            0.10,
-            BUILDING_DEPTH,
-            clear_h
+            BUILDING_WIDTH,
+            0.09,
+            glass_height
         ),
 
         (
-            BUILDING_WIDTH / 2,
             0,
-            zc
+            BACK_Y,
+            glass_z
         ),
 
         MAT_GLASS,
@@ -1866,176 +2860,94 @@ for level in range(
     )
 
 
-    # west
+    # sides
 
-    box(
-        "West Glass",
-
-        (
-            0.10,
-            BUILDING_DEPTH,
-            clear_h
-        ),
-
-        (
-            -BUILDING_WIDTH / 2,
-            0,
-            zc
-        ),
-
-        MAT_GLASS,
-        COL_FACADE
-    )
-
-
-    # front / south
-
-    if level == 0:
-
-        garage_left = (
-            GARAGE_X
-            - GARAGE_CLEAR_WIDTH / 2
-        )
-
-
-        left_width = (
-            garage_left
-            + BUILDING_WIDTH / 2
-        )
-
+    for side in [
+        -1,
+        1
+    ]:
 
         box(
-            "Ground Front Glass Left",
+            "Side Curtain Glass",
 
             (
-                left_width,
-                0.10,
-                clear_h
+                0.09,
+                BUILDING_DEPTH,
+                glass_height
             ),
 
             (
-                -BUILDING_WIDTH / 2
-                + left_width / 2,
+                side
+                * BUILDING_WIDTH / 2,
 
-                FRONT_Y,
-
-                zc
-            ),
-
-            MAT_GLASS,
-            COL_FACADE
-        )
-
-
-        garage_right = (
-            GARAGE_X
-            + GARAGE_CLEAR_WIDTH / 2
-        )
-
-
-        right_width = (
-            BUILDING_WIDTH / 2
-            - garage_right
-        )
-
-
-        if right_width > 0.1:
-
-            box(
-                "Ground Front Glass Right",
-
-                (
-                    right_width,
-                    0.10,
-                    clear_h
-                ),
-
-                (
-                    garage_right
-                    + right_width / 2,
-
-                    FRONT_Y,
-
-                    zc
-                ),
-
-                MAT_GLASS,
-                COL_FACADE
-            )
-
-
-    else:
-
-        box(
-            "Front Glass",
-
-            (
-                BUILDING_WIDTH,
-                0.10,
-                clear_h
-            ),
-
-            (
                 0,
-                FRONT_Y,
-                zc
+
+                glass_z
             ),
 
             MAT_GLASS,
             COL_FACADE
         )
+
+
+    # spandrel
+
+    box(
+        "Front Spandrel Band",
+
+        (
+            BUILDING_WIDTH,
+            0.12,
+            0.38
+        ),
+
+        (
+            0,
+            FRONT_Y - 0.02,
+            z0 + 0.18
+        ),
+
+        MAT_SPANDREL,
+        COL_FACADE
+    )
 
 
 # ============================================================
-# FRONT MULLIONS
+# 52 - FRONT CURTAIN WALL MULLIONS
 # ============================================================
 
 for level in range(
+    1,
     LEVEL_COUNT
 ):
 
     z0 = LEVELS[level]
 
-    h = (
+    height = (
         LEVELS[level + 1]
         - z0
     )
 
 
     for x in range(
-        -15,
-        16,
-        3
+        -16,
+        17,
+        2
     ):
 
-
-        if (
-            level == 0
-            and
-            abs(
-                x - GARAGE_X
-            ) < (
-                GARAGE_CLEAR_WIDTH / 2
-                + 0.5
-            )
-        ):
-
-            continue
-
-
         box(
-            "Front Mullion",
+            "Front Vertical Mullion",
 
             (
-                0.09,
-                0.14,
-                h
+                0.065,
+                0.13,
+                height
             ),
 
             (
                 x,
-                FRONT_Y - 0.04,
-                z0 + h / 2
+                FRONT_Y - 0.055,
+                z0 + height / 2
             ),
 
             MAT_ALUMINIUM,
@@ -2043,172 +2955,263 @@ for level in range(
         )
 
 
-# ============================================================
-# OFFICE INTERIOR
-# ============================================================
-
-def office_desk(
-    x,
-    y,
-    z
-):
-
     box(
-        "Office Desk",
+        "Front Horizontal Transom",
 
         (
-            1.50,
-            0.70,
+            BUILDING_WIDTH,
+            0.13,
             0.07
         ),
 
         (
-            x,
-            y,
-            z + 0.74
+            0,
+            FRONT_Y - 0.055,
+            z0 + 2.15
         ),
 
-        MAT_TIMBER,
-        COL_OFFICE
+        MAT_ALUMINIUM,
+        COL_FACADE
     )
 
 
-    box(
-        "Office Chair",
-
-        (
-            0.50,
-            0.50,
-            0.72
-        ),
-
-        (
-            x,
-            y - 0.72,
-            z + 0.36
-        ),
-
-        MAT_BLACK,
-        COL_OFFICE
-    )
-
-
-# reception
+# ============================================================
+# 53 - ROOFTOP CORE / PLANT
+# ============================================================
 
 box(
-    "Reception Desk",
+    "Roof Lift Overrun",
+
+    (
+        SHAFT_WIDTH + 0.40,
+        SHAFT_DEPTH + 0.40,
+        LIFT_OVERRUN
+    ),
+
+    (
+        LIFT_X,
+        LIFT_Y,
+
+        BUILDING_HEIGHT
+        + LIFT_OVERRUN / 2
+    ),
+
+    MAT_DARK_CONCRETE,
+    COL_STRUCTURE
+)
+
+
+box(
+    "Roof Plant Room",
+
+    (
+        6.0,
+        5.0,
+        2.4
+    ),
 
     (
         4.0,
+        4.0,
+
+        BUILDING_HEIGHT + 1.2
+    ),
+
+    MAT_DARK_CONCRETE,
+    COL_STRUCTURE
+)
+
+
+# ============================================================
+# 54 - LOBBY
+# ============================================================
+
+box(
+    "Lobby Feature Wall",
+
+    (
+        6.5,
+        0.18,
+        3.20
+    ),
+
+    (
+        ENTRY_X,
+        FRONT_Y + 7.5,
+        1.60
+    ),
+
+    MAT_WHITE,
+    COL_INTERIOR
+)
+
+
+box(
+    "Lobby Reception Desk",
+
+    (
+        3.6,
         0.90,
         1.0
     ),
 
     (
-        -8,
-        FRONT_Y + 8,
+        ENTRY_X,
+        FRONT_Y + 5.5,
         0.50
     ),
 
     MAT_TIMBER,
-    COL_OFFICE
+    COL_INTERIOR
 )
 
 
-# upper office levels
+# ============================================================
+# 55 - UPPER OFFICE CORE
+# ============================================================
 
 for level in range(
     1,
     LEVEL_COUNT
 ):
 
-    floor_z = LEVELS[level]
+    floor_z = (
+        LEVELS[level]
+    )
 
 
-    for x in [
-        -11,
-        -6,
-        3,
-        8
-    ]:
+    box(
+        "Office Core Wall",
 
-        for y in [
-            -10,
-            -3,
-            6
-        ]:
+        (
+            8.0,
+            0.12,
+            2.70
+        ),
 
+        (
+            -4.0,
+            10.0,
+            floor_z + 1.35
+        ),
 
-            if (
-                abs(
-                    x - LIFT_X
-                ) < 3
-                and
-                abs(
-                    y - LIFT_Y
-                ) < 3
-            ):
-
-                continue
+        MAT_WHITE,
+        COL_INTERIOR
+    )
 
 
-            office_desk(
-                x,
-                y,
-                floor_z
-            )
+    box(
+        "Meeting Room Wall",
+
+        (
+            0.12,
+            6.0,
+            2.70
+        ),
+
+        (
+            -8.5,
+            12.0,
+            floor_z + 1.35
+        ),
+
+        MAT_WHITE,
+        COL_INTERIOR
+    )
+
+
+    box(
+        "Meeting Table",
+
+        (
+            3.0,
+            1.2,
+            0.10
+        ),
+
+        (
+            -11.0,
+            12.0,
+            floor_z + 0.75
+        ),
+
+        MAT_TIMBER,
+        COL_INTERIOR
+    )
 
 
 # ============================================================
-# PARKING LINES
+# 56 - BASEMENT PARKING
 # ============================================================
 
 for row_y in [
-    -14,
+    -13,
     16
 ]:
 
-    for x in range(
+    for x in [
         -15,
-        16,
-        3
-    ):
-
-
-        if (
-            abs(
-                x - GARAGE_X
-            ) < 4
-        ):
-
-            continue
-
+        -12,
+        -9,
+        -6,
+        -3,
+        0,
+        3,
+        6,
+        15
+    ]:
 
         box(
-            "Parking Line",
+            "Parking Bay Line",
 
             (
                 0.055,
-                5.0,
-                0.025
+                5.2,
+                0.020
             ),
 
             (
                 x,
                 row_y,
-                BASEMENT_Z + 0.03
+                BASEMENT_Z + 0.02
             ),
 
-            MAT_LINE,
+            MAT_WHITE_LINE,
             COL_BASEMENT
         )
 
 
 # ============================================================
-# B1 SERVICE PIPES
+# 57 - BASEMENT DRIVE AISLE
 # ============================================================
 
-SERVICE_Z = -0.65
+box(
+    "B1 Drive Aisle Line",
+
+    (
+        0.08,
+        18.0,
+        0.020
+    ),
+
+    (
+        1.5,
+        6.5,
+        BASEMENT_Z + 0.025
+    ),
+
+    MAT_YELLOW,
+    COL_BASEMENT
+)
+
+
+# ============================================================
+# 58 - B1 SERVICES
+#
+# Keep them away from ramp zone.
+# ============================================================
+
+SERVICE_Z = -0.58
 
 
 create_pipe(
@@ -2221,34 +3224,32 @@ create_pipe(
     ),
 
     (
-        6,
+        5,
         10,
         SERVICE_Z
     ),
 
-    0.10,
-
+    0.11,
     MAT_DRAIN
 )
 
 
 create_pipe(
-    "Water Main",
+    "Cold Water Main",
 
     (
         -15,
         13,
-        SERVICE_Z + 0.08
+        SERVICE_Z + 0.10
     ),
 
     (
-        6,
+        5,
         13,
-        SERVICE_Z + 0.08
+        SERVICE_Z + 0.10
     ),
 
     0.045,
-
     MAT_WATER
 )
 
@@ -2269,7 +3270,6 @@ create_pipe(
     ),
 
     0.055,
-
     MAT_FIRE
 )
 
@@ -2280,7 +3280,7 @@ for x in [
     -6,
     -2,
     2,
-    6
+    5
 ]:
 
     create_pipe(
@@ -2299,1269 +3299,1055 @@ for x in [
         ),
 
         0.025,
-
         MAT_FIRE
     )
 
 
 # ============================================================
-# TRUCK MASTER
-#
-# IMPORTANT:
-# Build all truck geometry while TRUCK = identity.
+# 59 - TREE FUNCTION
 # ============================================================
 
-TRUCK = bpy.data.objects.new(
-    "TRUCK_MASTER",
-    None
-)
-
-COL_TRUCK.objects.link(
-    TRUCK
-)
-
-TRUCK.empty_display_type = 'CUBE'
-TRUCK.empty_display_size = 0.6
-
-TRUCK.location = (
-    0,
-    0,
-    0
-)
-
-TRUCK.rotation_euler = (
-    0,
-    0,
-    0
-)
-
-
-# ============================================================
-# TRUCK BOX
-# ============================================================
-
-def truck_box(
+def create_tree(
     name,
-    dimensions,
-    location,
-    material,
-    rotation=(0, 0, 0)
+    x,
+    y,
+    scale=1.0
 ):
 
-    return box(
-        name,
-        dimensions,
-        location,
-        material,
-        COL_TRUCK,
-        rotation,
-        TRUCK
-    )
+    # pit
 
-
-# ============================================================
-# CHASSIS
-# ============================================================
-
-truck_box(
-    "Truck Chassis",
-
-    (
-        7.8,
-        0.65,
-        0.30
-    ),
-
-    (
-        0,
-        0,
-        0.72
-    ),
-
-    MAT_BLACK
-)
-
-
-# ============================================================
-# FLATBED
-# ============================================================
-
-BED_X = -0.55
-BED_Z = 1.10
-
-BED_LENGTH = 6.30
-BED_WIDTH = 2.30
-
-
-truck_box(
-    "Truck Tray",
-
-    (
-        BED_LENGTH,
-        BED_WIDTH,
-        0.18
-    ),
-
-    (
-        BED_X,
-        0,
-        BED_Z
-    ),
-
-    MAT_TRUCK_METAL
-)
-
-
-for side in [
-    -1,
-    1
-]:
-
-    truck_box(
-        "Tray Side",
+    box(
+        name + "_Pit",
 
         (
-            BED_LENGTH,
-            0.08,
-            0.36
+            1.40 * scale,
+            1.40 * scale,
+            0.10
         ),
 
         (
-            BED_X,
-            side * BED_WIDTH / 2,
-            BED_Z + 0.22
+            x,
+            y,
+            0.07
         ),
 
-        MAT_TRUCK_WHITE
+        MAT_SOIL,
+        COL_LANDSCAPE
+    )
+
+
+    # trunk
+
+    bpy.ops.mesh.primitive_cylinder_add(
+        vertices=18,
+        radius=0.17 * scale,
+        depth=3.5 * scale,
+
+        location=(
+            x,
+            y,
+            1.80 * scale
+        )
+    )
+
+
+    trunk = bpy.context.object
+
+    trunk.name = (
+        name + "_Trunk"
+    )
+
+
+    trunk.data.materials.append(
+        MAT_TREE_TRUNK
+    )
+
+
+    for old in list(
+        trunk.users_collection
+    ):
+
+        old.objects.unlink(
+            trunk
+        )
+
+
+    COL_LANDSCAPE.objects.link(
+        trunk
+    )
+
+
+    canopy_data = [
+
+        (
+            0,
+            0,
+            4.0,
+            1.55
+        ),
+
+        (
+            -0.75,
+            0.15,
+            4.35,
+            0.95
+        ),
+
+        (
+            0.70,
+            -0.15,
+            4.50,
+            1.00
+        ),
+
+        (
+            0.10,
+            0.55,
+            4.80,
+            0.90
+        )
+    ]
+
+
+    for index, (
+        ox,
+        oy,
+        oz,
+        radius
+    ) in enumerate(
+        canopy_data
+    ):
+
+        bpy.ops.mesh.primitive_ico_sphere_add(
+            subdivisions=2,
+
+            radius=radius * scale,
+
+            location=(
+                x + ox * scale,
+                y + oy * scale,
+                oz * scale
+            )
+        )
+
+
+        canopy = (
+            bpy.context.object
+        )
+
+
+        canopy.name = (
+            name
+            + f"_Canopy_{index}"
+        )
+
+
+        canopy.scale = (
+            1.0,
+            0.90,
+            1.08
+        )
+
+
+        canopy.data.materials.append(
+            MAT_TREE_LEAF
+        )
+
+
+        for old in list(
+            canopy.users_collection
+        ):
+
+            old.objects.unlink(
+                canopy
+            )
+
+
+        COL_LANDSCAPE.objects.link(
+            canopy
+        )
+
+
+# ============================================================
+# 60 - NEAR STREET TREES
+#
+# Garage zone kept completely clear.
+# ============================================================
+
+NEAR_TREE_DATA = [
+
+    (-29, 0.95),
+    (-22, 1.05),
+    (-15, 0.90),
+    (-9, 1.02),
+    (-3, 0.92),
+    (3, 1.00),
+    (18, 0.95),
+    (25, 1.08),
+    (32, 0.90)
+]
+
+
+for index, (
+    x,
+    scale
+) in enumerate(
+    NEAR_TREE_DATA
+):
+
+    if (
+        GARAGE_LEFT - 2.0
+        <
+        x
+        <
+        GARAGE_RIGHT + 2.0
+    ):
+
+        continue
+
+
+    create_tree(
+        f"Near_Tree_{index:02d}",
+
+        x,
+
+        NEAR_FOOTPATH_Y,
+
+        scale
     )
 
 
 # ============================================================
-# CAB
+# 61 - OPPOSITE STREET TREES
 # ============================================================
 
-truck_box(
-    "Cab Lower",
+OPPOSITE_TREE_DATA = [
 
-    (
-        2.10,
-        2.05,
-        1.15
-    ),
-
-    (
-        3.55,
-        0,
-        1.25
-    ),
-
-    MAT_TRUCK_WHITE
-)
+    (-33, 1.02),
+    (-25, 0.90),
+    (-17, 1.08),
+    (-9, 0.95),
+    (-1, 1.03),
+    (7, 0.92),
+    (15, 1.05),
+    (24, 0.96),
+    (33, 1.08)
+]
 
 
-truck_box(
-    "Cab Upper",
+for index, (
+    x,
+    scale
+) in enumerate(
+    OPPOSITE_TREE_DATA
+):
 
-    (
-        1.90,
-        2.00,
-        1.30
-    ),
+    create_tree(
+        f"Opposite_Tree_{index:02d}",
 
-    (
-        3.52,
-        0,
-        2.28
-    ),
+        x,
 
-    MAT_TRUCK_WHITE
-)
+        OPPOSITE_FOOTPATH_Y,
 
-
-truck_box(
-    "Cab Roof",
-
-    (
-        2.0,
-        2.08,
-        0.14
-    ),
-
-    (
-        3.50,
-        0,
-        3.00
-    ),
-
-    MAT_TRUCK_WHITE
-)
-
-
-# windscreen
-
-truck_box(
-    "Truck Windscreen",
-
-    (
-        0.08,
-        1.65,
-        0.88
-    ),
-
-    (
-        4.50,
-        0,
-        2.40
-    ),
-
-    MAT_TRUCK_GLASS,
-
-    (
-        0,
-        math.radians(-8),
-        0
+        scale
     )
-)
 
 
-# bumper
+# ============================================================
+# 62 - LANDSCAPE SHRUBS
+# ============================================================
 
-truck_box(
-    "Front Bumper",
+SHRUBS = [
 
-    (
-        0.18,
-        1.95,
-        0.27
-    ),
+    (-15.5, FRONT_Y + 0.7),
+    (-14.0, FRONT_Y + 0.7),
 
-    (
-        4.70,
-        0,
+    (-3.0, FRONT_Y + 0.7),
+    (-1.5, FRONT_Y + 0.7),
+
+    (16.0, FRONT_Y + 0.7)
+]
+
+
+for index, (
+    x,
+    y
+) in enumerate(
+    SHRUBS
+):
+
+    bpy.ops.mesh.primitive_ico_sphere_add(
+        subdivisions=2,
+        radius=0.45,
+
+        location=(
+            x,
+            y,
+            0.42
+        )
+    )
+
+
+    shrub = bpy.context.object
+
+    shrub.name = (
+        f"Landscape Shrub {index:02d}"
+    )
+
+
+    shrub.scale = (
+        1.25,
+        0.80,
         0.72
-    ),
-
-    MAT_TRUCK_METAL
-)
+    )
 
 
-# grille
+    shrub.data.materials.append(
+        MAT_TREE_LEAF
+    )
 
-truck_box(
-    "Front Grille",
 
-    (
-        0.08,
-        1.40,
-        0.50
-    ),
+    for old in list(
+        shrub.users_collection
+    ):
 
-    (
-        4.60,
-        0,
-        1.28
-    ),
+        old.objects.unlink(
+            shrub
+        )
 
-    MAT_BLACK
-)
+
+    COL_LANDSCAPE.objects.link(
+        shrub
+    )
 
 
 # ============================================================
-# WHEELS
+# 63 - STREET LIGHT
 # ============================================================
 
-def make_truck_wheel(
+def street_light(
+    name,
     x,
     y
 ):
 
     bpy.ops.mesh.primitive_cylinder_add(
-        vertices=32,
-        radius=0.45,
-        depth=0.28,
+        vertices=16,
+        radius=0.075,
+        depth=5.2,
 
         location=(
             x,
             y,
-            0.45
-        ),
-
-        rotation=(
-            math.radians(90),
-            0,
-            0
+            2.60
         )
     )
 
 
-    tyre = bpy.context.object
+    pole = bpy.context.object
 
-    tyre.data.materials.append(
+    pole.name = (
+        name + "_Pole"
+    )
+
+
+    pole.data.materials.append(
         MAT_BLACK
     )
 
-    move_to_collection(
-        tyre,
-        COL_TRUCK
+
+    for old in list(
+        pole.users_collection
+    ):
+
+        old.objects.unlink(
+            pole
+        )
+
+
+    COL_SITE.objects.link(
+        pole
     )
 
-    tyre.parent = TRUCK
 
+    box(
+        name + "_Arm",
 
-    bpy.ops.mesh.primitive_cylinder_add(
-        vertices=24,
-        radius=0.20,
-        depth=0.30,
-
-        location=(
-            x,
-            y,
-            0.45
+        (
+            1.15,
+            0.07,
+            0.07
         ),
+
+        (
+            x + 0.50,
+            y,
+            5.05
+        ),
+
+        MAT_BLACK,
+        COL_SITE,
 
         rotation=(
-            math.radians(90),
             0,
+            math.radians(-8),
             0
         )
     )
 
 
-    rim = bpy.context.object
-
-    rim.data.materials.append(
-        MAT_TRUCK_METAL
-    )
-
-    move_to_collection(
-        rim,
-        COL_TRUCK
-    )
-
-    rim.parent = TRUCK
-
-
-for x in [
-    3.30,
-    -1.35
-]:
-
-    for y in [
-        -1.02,
-        1.02
-    ]:
-
-        make_truck_wheel(
-            x,
-            y
-        )
-
-
-# ============================================================
-# FOLDED RED CRANE
-# Transport position.
-# ============================================================
-
-truck_box(
-    "Crane Base",
-
-    (
-        0.72,
-        0.76,
-        0.82
-    ),
-
-    (
-        1.95,
-        0,
-        1.55
-    ),
-
-    MAT_RED
-)
-
-
-truck_box(
-    "Crane Upright",
-
-    (
-        0.32,
-        0.40,
-        1.35
-    ),
-
-    (
-        1.95,
-        0,
-        2.42
-    ),
-
-    MAT_RED
-)
-
-
-beam_between(
-    "Crane Boom 1",
-
-    (
-        1.95,
-        0,
-        3.0
-    ),
-
-    (
-        0.25,
-        0,
-        3.15
-    ),
-
-    0.28,
-    0.25,
-
-    MAT_RED,
-    COL_TRUCK,
-    TRUCK
-)
-
-
-beam_between(
-    "Crane Boom 2",
-
-    (
-        0.25,
-        0,
-        3.15
-    ),
-
-    (
-        -1.40,
-        0,
-        2.95
-    ),
-
-    0.22,
-    0.20,
-
-    MAT_RED,
-    COL_TRUCK,
-    TRUCK
-)
-
-
-# ============================================================
-# STEEL STAIR ON TRAY
-# ============================================================
-
-STAIR_START_X = -3.0
-
-STAIR_RUN = 4.8
-
-STAIR_RISE = 0.85
-
-STAIR_ANGLE = math.atan2(
-    STAIR_RISE,
-    STAIR_RUN
-)
-
-STAIR_LENGTH = math.sqrt(
-    STAIR_RUN ** 2
-    + STAIR_RISE ** 2
-)
-
-STAIR_Z = (
-    BED_Z + 0.28
-)
-
-
-# stringers
-
-for side in [
-    -0.58,
-    0.58
-]:
-
-    truck_box(
-        "Stair Stringer",
+    box(
+        name + "_Lamp",
 
         (
-            STAIR_LENGTH,
-            0.11,
-            0.21
+            0.50,
+            0.22,
+            0.10
         ),
 
         (
-            STAIR_START_X
-            + STAIR_RUN / 2,
-
-            side,
-
-            STAIR_Z
-            + STAIR_RISE / 2
+            x + 1.05,
+            y,
+            4.96
         ),
 
-        MAT_STAIR,
-
-        (
-            0,
-            -STAIR_ANGLE,
-            0
-        )
+        MAT_BLACK,
+        COL_SITE
     )
 
 
-# treads
-
-NUMBER_OF_TREADS = 9
-
-
-for index in range(
-    NUMBER_OF_TREADS
+for index, x in enumerate(
+    [
+        -27,
+        -8,
+        21,
+        37
+    ]
 ):
 
-    ratio = (
-        index
-        / (
-            NUMBER_OF_TREADS - 1
-        )
+    street_light(
+        f"Near Street Light {index}",
+        x,
+        -24.0
     )
 
 
-    x = (
-        STAIR_START_X
-        + ratio * STAIR_RUN
-    )
-
-
-    z = (
-        STAIR_Z
-        + ratio * STAIR_RISE
-    )
-
-
-    truck_box(
-        "Stair Tread",
-
-        (
-            0.38,
-            1.30,
-            0.06
-        ),
-
-        (
-            x,
-            0,
-            z
-        ),
-
-        MAT_STAIR
-    )
-
-
-# landing
-
-truck_box(
-    "Stair Landing",
-
-    (
-        0.9,
-        1.35,
-        0.10
-    ),
-
-    (
-        STAIR_START_X
-        + STAIR_RUN
-        + 0.35,
-
-        0,
-
-        STAIR_Z
-        + STAIR_RISE
-    ),
-
-    MAT_STAIR
-)
-
-
-# straps
-
-for x in [
-    -1.8,
-    0.0,
-    1.3
-]:
-
-    truck_box(
-        "Cargo Strap",
-
-        (
-            0.07,
-            2.20,
-            0.06
-        ),
-
-        (
-            x,
-            0,
-            BED_Z + 1.05
-        ),
-
-        MAT_STRAP
-    )
-
-
-# ============================================================
-# TRUCK ROUTE
-#
-# IMPORTANT:
-# NO Follow Path.
-# Direct location/rotation animation.
-# Much more reliable.
-# ============================================================
-
-WAYPOINTS = [
-
-    # STREET
-    (
-        1,
-        (-48, ROAD_CENTER_Y, 0.0)
-    ),
-
-    (
-        80,
-        (-20, ROAD_CENTER_Y, 0.0)
-    ),
-
-    (
-        130,
-        (3, ROAD_CENTER_Y, 0.0)
-    ),
-
-
-    # TURN TO GARAGE
-    (
-        160,
-        (8, ROAD_CENTER_Y + 1.5, 0.0)
-    ),
-
-    (
-        185,
-        (10.5, FRONT_Y - 6.0, 0.0)
-    ),
-
-    (
-        210,
-        (GARAGE_X, FRONT_Y - 3.0, 0.0)
-    ),
-
-
-    # PORTAL
-    (
-        230,
-        (GARAGE_X, FRONT_Y - 0.8, 0.0)
-    ),
-
-    (
-        250,
-        (GARAGE_X, RAMP_START_Y, 0.0)
-    ),
-
-
-    # DOWN RAMP
-    (
-        290,
-        (
-            GARAGE_X,
-
-            RAMP_START_Y
-            + RAMP_RUN * 0.25,
-
-            BASEMENT_Z * 0.25
-        )
-    ),
-
-    (
-        330,
-        (
-            GARAGE_X,
-
-            RAMP_START_Y
-            + RAMP_RUN * 0.50,
-
-            BASEMENT_Z * 0.50
-        )
-    ),
-
-    (
-        365,
-        (
-            GARAGE_X,
-
-            RAMP_START_Y
-            + RAMP_RUN * 0.75,
-
-            BASEMENT_Z * 0.75
-        )
-    ),
-
-    (
-        390,
-        (
-            GARAGE_X,
-            RAMP_END_Y,
-            BASEMENT_Z
-        )
-    ),
-
-
-    # CLEAR RAMP
-    (
-        410,
-        (
-            GARAGE_X,
-            RAMP_END_Y + 5,
-            BASEMENT_Z
-        )
-    ),
-
-
-    # TURN INSIDE B1
-    (
-        440,
-        (
-            7,
-            13,
-            BASEMENT_Z
-        )
-    ),
-
-    (
-        465,
-        (
-            3,
-            13,
-            BASEMENT_Z
-        )
-    ),
-
-    (
-        490,
-        (
-            0,
-            10,
-            BASEMENT_Z
-        )
-    ),
-
-
-    # NEAR LIFT
-    (
-        520,
-        (
-            0,
-            6,
-            BASEMENT_Z
-        )
-    )
-]
-
-
-# ============================================================
-# CALCULATE VEHICLE ROTATIONS
-# ============================================================
-
-positions = [
-    Vector(item[1])
-    for item in WAYPOINTS
-]
-
-
-frames = [
-    item[0]
-    for item in WAYPOINTS
-]
-
-
-yaws = []
-pitches = []
-
-
-for i in range(
-    len(positions)
+for index, x in enumerate(
+    [
+        -34,
+        -15,
+        7,
+        29
+    ]
 ):
 
+    street_light(
+        f"Opposite Street Light {index}",
+        x,
+        OPPOSITE_FOOTPATH_Y + 1.1
+    )
 
-    if i == 0:
 
-        tangent = (
-            positions[1]
-            - positions[0]
+# ============================================================
+# 64 - CONTEXT BUILDING
+# ============================================================
+
+def context_building(
+    name,
+    x,
+    y,
+    width,
+    depth,
+    height,
+    style="dark"
+):
+
+    if style == "dark":
+
+        wall_material = (
+            MAT_CONTEXT_DARK
         )
-
-
-    elif i == len(positions) - 1:
-
-        tangent = (
-            positions[-1]
-            - positions[-2]
-        )
-
 
     else:
 
-        tangent = (
-            positions[i + 1]
-            - positions[i - 1]
+        wall_material = (
+            MAT_CONTEXT_LIGHT
         )
 
 
-    horizontal = math.sqrt(
-        tangent.x ** 2
-        + tangent.y ** 2
-    )
+    # mass
 
+    box(
+        name + "_Mass",
 
-    yaw = math.atan2(
-        tangent.y,
-        tangent.x
-    )
-
-
-    pitch = -math.atan2(
-        tangent.z,
-        horizontal
-    )
-
-
-    yaws.append(
-        yaw
-    )
-
-    pitches.append(
-        pitch
-    )
-
-
-# ============================================================
-# UNWRAP YAW
-# Prevent 360-degree rotation.
-# ============================================================
-
-for i in range(
-    1,
-    len(yaws)
-):
-
-    while (
-        yaws[i]
-        - yaws[i - 1]
-        > math.pi
-    ):
-
-        yaws[i] -= (
-            2 * math.pi
-        )
-
-
-    while (
-        yaws[i]
-        - yaws[i - 1]
-        < -math.pi
-    ):
-
-        yaws[i] += (
-            2 * math.pi
-        )
-
-
-# ============================================================
-# INSERT TRUCK KEYS
-# ============================================================
-
-TRUCK.rotation_mode = 'XYZ'
-
-
-for i in range(
-    len(WAYPOINTS)
-):
-
-    frame = frames[i]
-
-    TRUCK.location = (
-        positions[i]
-    )
-
-
-    TRUCK.rotation_euler = (
-
-        0,
-
-        pitches[i],
-
-        yaws[i]
-    )
-
-
-    TRUCK.keyframe_insert(
-        data_path="location",
-        frame=frame
-    )
-
-
-    TRUCK.keyframe_insert(
-        data_path="rotation_euler",
-        frame=frame
-    )
-
-
-# ============================================================
-# LINEAR VEHICLE MOTION
-# ============================================================
-
-if TRUCK.animation_data:
-
-    action = (
-        TRUCK.animation_data.action
-    )
-
-
-    if action:
-
-        for curve in action.fcurves:
-
-            for key in (
-                curve.keyframe_points
-            ):
-
-                key.interpolation = (
-                    'LINEAR'
-                )
-
-
-# ============================================================
-# CAMERA
-# World-space chase camera.
-# ============================================================
-
-CAM_DATA = bpy.data.cameras.new(
-    "CAM_TRUCK_FOLLOW"
-)
-
-CAM_DATA.lens = (
-    CAMERA_LENS
-)
-
-CAM_DATA.clip_start = 0.05
-
-CAM_DATA.clip_end = 2000
-
-
-CAMERA = bpy.data.objects.new(
-    "CAM_TRUCK_FOLLOW",
-    CAM_DATA
-)
-
-COL_ANIMATION.objects.link(
-    CAMERA
-)
-
-CAMERA.rotation_mode = (
-    'QUATERNION'
-)
-
-
-TARGET = bpy.data.objects.new(
-    "CAM_TRUCK_TARGET",
-    None
-)
-
-COL_ANIMATION.objects.link(
-    TARGET
-)
-
-TARGET.empty_display_type = (
-    'SPHERE'
-)
-
-TARGET.empty_display_size = 0.15
-
-
-# ============================================================
-# BAKE CAMERA
-# ============================================================
-
-scene = bpy.context.scene
-
-scene.frame_start = (
-    FRAME_START
-)
-
-scene.frame_end = (
-    FRAME_END
-)
-
-
-WORLD_UP = Vector(
-    (
-        0,
-        0,
-        1
-    )
-)
-
-
-for frame in range(
-    FRAME_START,
-    FRAME_END + 1,
-    CAMERA_BAKE_STEP
-):
-
-    scene.frame_set(
-        frame
-    )
-
-    bpy.context.view_layer.update()
-
-
-    truck_position = (
-        TRUCK.matrix_world.translation.copy()
-    )
-
-
-    forward = (
-        TRUCK.matrix_world.to_3x3()
-        @ Vector(
-            (
-                1,
-                0,
-                0
-            )
-        )
-    )
-
-
-    if forward.length < 0.001:
-
-        forward = Vector(
-            (
-                1,
-                0,
-                0
-            )
-        )
-
-
-    forward.normalize()
-
-
-    forward_flat = Vector(
         (
-            forward.x,
-            forward.y,
-            0
+            width,
+            depth,
+            height
+        ),
+
+        (
+            x,
+            y,
+            height / 2
+        ),
+
+        wall_material,
+        COL_CONTEXT
+    )
+
+
+    storey_height = 3.5
+
+    storeys = max(
+        2,
+        int(
+            height / storey_height
         )
     )
 
 
-    if forward_flat.length < 0.001:
+    # façade toward street
 
-        forward_flat = Vector(
+    front_y = (
+        y + depth / 2 + 0.03
+    )
+
+
+    for level in range(
+        1,
+        storeys
+    ):
+
+        z = (
+            level
+            * storey_height
+            - 1.45
+        )
+
+
+        if z < 1.0:
+
+            continue
+
+
+        box(
+            name
+            + f"_Glass_{level:02d}",
+
             (
-                1,
-                0,
-                0
-            )
+                width - 1.0,
+                0.07,
+                2.15
+            ),
+
+            (
+                x,
+                front_y,
+                z
+            ),
+
+            MAT_CONTEXT_GLASS,
+            COL_CONTEXT
         )
 
 
-    forward_flat.normalize()
+    # vertical mullions
 
-
-    side = (
-        forward_flat.cross(
-            WORLD_UP
-        )
-    )
-
-
-    side.normalize()
-
-
-    camera_position = (
-
-        truck_position
-
-        - forward_flat
-        * CAMERA_BACK
-
-        + side
-        * CAMERA_SIDE
-
-        + WORLD_UP
-        * CAMERA_HEIGHT
-    )
-
-
-    target_position = (
-
-        truck_position
-
-        + forward
-        * CAMERA_LOOK_AHEAD
-
-        + WORLD_UP
-        * CAMERA_TARGET_HEIGHT
-    )
-
-
-    CAMERA.location = (
-        camera_position
-    )
-
-
-    TARGET.location = (
-        target_position
-    )
-
-
-    direction = (
-        target_position
-        - camera_position
-    )
-
-
-    CAMERA.rotation_quaternion = (
-        direction.to_track_quat(
-            '-Z',
-            'Y'
+    count = max(
+        3,
+        int(
+            width / 3.0
         )
     )
 
 
-    CAMERA.keyframe_insert(
-        data_path="location",
-        frame=frame
+    spacing = (
+        width / count
     )
 
 
-    CAMERA.keyframe_insert(
-        data_path="rotation_quaternion",
-        frame=frame
+    for i in range(
+        count + 1
+    ):
+
+        mx = (
+            x
+            - width / 2
+            + i * spacing
+        )
+
+
+        box(
+            name + "_Mullion",
+
+            (
+                0.075,
+                0.10,
+                height - 1.0
+            ),
+
+            (
+                mx,
+                front_y + 0.02,
+                height / 2
+            ),
+
+            MAT_ALUMINIUM,
+            COL_CONTEXT
+        )
+
+
+    # roof parapet
+
+    box(
+        name + "_Parapet",
+
+        (
+            width + 0.20,
+            depth + 0.20,
+            0.55
+        ),
+
+        (
+            x,
+            y,
+            height + 0.275
+        ),
+
+        wall_material,
+        COL_CONTEXT
     )
 
 
 # ============================================================
-# CAMERA SMOOTHING
+# 65 - SURROUNDING CBD BUILDINGS
 # ============================================================
 
-if CAMERA.animation_data:
+context_building(
+    "CBD Opposite 01",
+    -38,
+    -54,
+    18,
+    18,
+    30,
+    "light"
+)
 
-    action = (
-        CAMERA.animation_data.action
+
+context_building(
+    "CBD Opposite 02",
+    -16,
+    -55,
+    22,
+    20,
+    44,
+    "dark"
+)
+
+
+context_building(
+    "CBD Opposite 03",
+    10,
+    -54,
+    24,
+    18,
+    36,
+    "light"
+)
+
+
+context_building(
+    "CBD Opposite 04",
+    39,
+    -56,
+    24,
+    22,
+    50,
+    "dark"
+)
+
+
+context_building(
+    "CBD West",
+    -31,
+    3,
+    18,
+    35,
+    32,
+    "dark"
+)
+
+
+context_building(
+    "CBD East",
+    30,
+    4,
+    16,
+    34,
+    26,
+    "light"
+)
+
+
+context_building(
+    "CBD Rear 01",
+    -13,
+    39,
+    18,
+    18,
+    40,
+    "light"
+)
+
+
+context_building(
+    "CBD Rear 02",
+    14,
+    41,
+    22,
+    20,
+    52,
+    "dark"
+)
+
+
+# ============================================================
+# 66 - RETAIL PODIUM ACROSS STREET
+# ============================================================
+
+box(
+    "Opposite Retail Podium",
+
+    (
+        58,
+        3.0,
+        4.0
+    ),
+
+    (
+        4,
+        -43.0,
+        2.0
+    ),
+
+    MAT_CONTEXT_DARK,
+    COL_CONTEXT
+)
+
+
+for x in range(
+    -22,
+    31,
+    5
+):
+
+    box(
+        "Retail Shopfront Glass",
+
+        (
+            4.1,
+            0.07,
+            2.8
+        ),
+
+        (
+            x,
+            -41.47,
+            1.65
+        ),
+
+        MAT_CONTEXT_GLASS,
+        COL_CONTEXT
     )
 
 
-    if action:
+# ============================================================
+# 67 - BASEMENT LIGHTS
+# ============================================================
 
-        for curve in action.fcurves:
+B1_LIGHTS = [
 
-            for key in (
-                curve.keyframe_points
-            ):
+    (-12, -13),
+    (-4, -13),
+    (4, -13),
 
-                key.interpolation = (
-                    'BEZIER'
-                )
+    (-12, -3),
+    (-4, -3),
+    (4, -3),
 
-                key.handle_left_type = (
-                    'AUTO_CLAMPED'
-                )
+    (-12, 7),
+    (-4, 7),
+    (4, 7),
 
-                key.handle_right_type = (
-                    'AUTO_CLAMPED'
-                )
+    (-12, 16),
+    (-4, 16),
+    (4, 16)
+]
+
+
+for index, (
+    x,
+    y
+) in enumerate(
+    B1_LIGHTS
+):
+
+    light_data = bpy.data.lights.new(
+        f"B1_LED_{index:02d}",
+        type='AREA'
+    )
+
+
+    light_data.energy = 420
+
+    light_data.shape = (
+        'RECTANGLE'
+    )
+
+    light_data.size = 3.5
+    light_data.size_y = 0.35
+
+    light_data.color = (
+        1.0,
+        0.90,
+        0.78
+    )
+
+
+    light = bpy.data.objects.new(
+        f"B1_LED_{index:02d}",
+        light_data
+    )
+
+
+    COL_LIGHTING.objects.link(
+        light
+    )
+
+
+    light.location = (
+        x,
+        y,
+        -0.55
+    )
 
 
 # ============================================================
-# LIGHTING
+# 68 - SUN
 # ============================================================
 
 sun_data = bpy.data.lights.new(
-    "Sun",
+    "Melbourne Sun",
     type='SUN'
 )
 
 sun_data.energy = 2.0
 
 sun_data.angle = math.radians(
-    8
+    7
 )
 
 
-SUN = bpy.data.objects.new(
-    "Sun",
+sun = bpy.data.objects.new(
+    "Melbourne Sun",
     sun_data
 )
 
-COL_LIGHTING.objects.link(
-    SUN
-)
-
-SUN.rotation_euler = (
-
-    math.radians(42),
-
-    math.radians(-18),
-
-    math.radians(30)
-)
-
-
-# Basement fill light
-
-area_data = bpy.data.lights.new(
-    "B1 Light",
-    type='AREA'
-)
-
-area_data.energy = 1000
-
-area_data.size = 10
-
-
-AREA = bpy.data.objects.new(
-    "B1 Light",
-    area_data
-)
 
 COL_LIGHTING.objects.link(
-    AREA
+    sun
 )
 
-AREA.location = (
-    0,
-    6,
-    -0.8
+
+sun.rotation_euler = (
+    math.radians(38),
+    math.radians(-20),
+    math.radians(32)
 )
 
 
 # ============================================================
-# WORLD
+# 69 - TRUCK REFERENCE POINTS
+#
+# Future truck code can use these directly.
 # ============================================================
 
-world = bpy.data.worlds.new(
+def create_reference(
+    name,
+    position,
+    size=0.45
+):
+
+    empty = bpy.data.objects.new(
+        name,
+        None
+    )
+
+
+    COL_REFERENCE.objects.link(
+        empty
+    )
+
+
+    empty.empty_display_type = (
+        'ARROWS'
+    )
+
+
+    empty.empty_display_size = (
+        size
+    )
+
+
+    empty.location = (
+        position
+    )
+
+
+    return empty
+
+
+create_reference(
+    "REF_STREET_START",
+
+    (
+        -50,
+        ROAD_CENTER_Y,
+        0
+    )
+)
+
+
+create_reference(
+    "REF_GARAGE_TURN",
+
+    (
+        GARAGE_X - 6,
+        ROAD_CENTER_Y,
+        0
+    )
+)
+
+
+create_reference(
+    "REF_GARAGE_APPROACH",
+
+    (
+        GARAGE_X,
+        FRONT_Y - 5,
+        0
+    )
+)
+
+
+create_reference(
+    "REF_GARAGE_PORTAL",
+
+    (
+        GARAGE_X,
+        FRONT_Y,
+        0
+    )
+)
+
+
+create_reference(
+    "REF_RAMP_START",
+
+    (
+        GARAGE_X,
+        RAMP_START_Y,
+        0
+    )
+)
+
+
+create_reference(
+    "REF_RAMP_TRANSITION_TOP",
+
+    (
+        GARAGE_X,
+        TOP_TRANSITION_END_Y,
+        MAIN_RAMP_START_Z
+    )
+)
+
+
+create_reference(
+    "REF_RAMP_MAIN_END",
+
+    (
+        GARAGE_X,
+        MAIN_RAMP_END_Y,
+        MAIN_RAMP_END_Z
+    )
+)
+
+
+create_reference(
+    "REF_RAMP_END",
+
+    (
+        GARAGE_X,
+        RAMP_END_Y,
+        BASEMENT_Z
+    )
+)
+
+
+create_reference(
+    "REF_B1_LOADING",
+
+    (
+        2.0,
+        8.0,
+        BASEMENT_Z
+    )
+)
+
+
+create_reference(
+    "REF_LIFT_LOADING",
+
+    (
+        LIFT_X,
+
+        LIFT_Y
+        - SHAFT_DEPTH / 2
+        - 3.0,
+
+        BASEMENT_Z
+    )
+)
+
+
+# ============================================================
+# 70 - WORLD / RENDER
+# ============================================================
+
+scene = bpy.context.scene
+
+
+world = bpy.data.worlds.get(
     "TCA World"
 )
+
+
+if world is None:
+
+    world = bpy.data.worlds.new(
+        "TCA World"
+    )
+
 
 scene.world = world
 
 world.use_nodes = True
 
 
-background = (
-    world.node_tree.nodes.get(
-        "Background"
-    )
+background = world.node_tree.nodes.get(
+    "Background"
 )
 
 
@@ -3570,20 +4356,17 @@ if background:
     background.inputs[
         "Color"
     ].default_value = (
-        0.12,
-        0.16,
-        0.22,
+        0.075,
+        0.105,
+        0.145,
         1
     )
 
+
     background.inputs[
         "Strength"
-    ].default_value = 0.75
+    ].default_value = 0.55
 
-
-# ============================================================
-# RENDER SETTINGS
-# ============================================================
 
 try:
 
@@ -3592,150 +4375,240 @@ try:
     )
 
 except:
-
     pass
 
 
-scene.render.resolution_x = 1920
+try:
 
-scene.render.resolution_y = 1080
-
-scene.render.resolution_percentage = 50
-
-scene.view_settings.exposure = 0.20
-
-
-# ============================================================
-# TIMELINE MARKERS
-# ============================================================
-
-markers = [
-
-    (
-        "01 STREET",
-        1
-    ),
-
-    (
-        "02 APPROACH",
-        130
-    ),
-
-    (
-        "03 TURN TO GARAGE",
-        175
-    ),
-
-    (
-        "04 GARAGE ENTRY",
-        225
-    ),
-
-    (
-        "05 DOWN RAMP",
-        290
-    ),
-
-    (
-        "06 B1",
-        390
-    ),
-
-    (
-        "07 TO LIFT",
-        450
-    ),
-
-    (
-        "08 LIFT AREA",
-        520
-    )
-]
-
-
-for name, frame in markers:
-
-    scene.timeline_markers.new(
-        name,
-        frame=frame
+    scene.view_settings.view_transform = (
+        'AgX'
     )
 
+except:
+    pass
 
-# ============================================================
-# ACTIVE CAMERA
-# ============================================================
 
-scene.camera = CAMERA
+scene.view_settings.exposure = (
+    0.10
+)
+
+
+scene.render.resolution_x = (
+    1920
+)
+
+scene.render.resolution_y = (
+    1080
+)
+
+scene.render.resolution_percentage = (
+    60
+)
+
+
+scene.frame_start = 1
+scene.frame_end = 250
 
 scene.frame_set(
-    FRAME_START
+    1
 )
 
 
 # ============================================================
-# COMPLETE
+# 71 - REPORT
 # ============================================================
 
+MAIN_RAMP_DROP = (
+    abs(
+        MAIN_RAMP_END_Z
+        - MAIN_RAMP_START_Z
+    )
+)
+
+
+MAIN_RAMP_GRADIENT = (
+    MAIN_RAMP_DROP
+    / MAIN_RAMP_LENGTH
+    * 100
+)
+
+
 print(
-    "\n=========================================="
+    "\n"
+    "=============================================="
 )
 
 print(
-    "TCA CLEAN MODEL COMPLETE"
+    "TCA CBD BUILDING V4 COMPLETE"
 )
 
 print(
-    "=========================================="
+    "=============================================="
 )
 
 print(
-    "Building:",
-    LEVEL_COUNT,
-    "levels"
+    "Building levels:",
+    LEVEL_COUNT
 )
 
 print(
-    "Basement:",
+    "Building height:",
+    round(
+        BUILDING_HEIGHT,
+        2
+    ),
+    "m"
+)
+
+print(
+    ""
+)
+
+print(
+    "BASEMENT:"
+)
+
+print(
+    "B1 level:",
     BASEMENT_Z,
     "m"
 )
 
 print(
+    ""
+)
+
+print(
+    "RAMP:"
+)
+
+print(
     "Ramp start:",
-    RAMP_START_Y
+    round(
+        RAMP_START_Y,
+        2
+    )
 )
 
 print(
     "Ramp end:",
-    RAMP_END_Y
+    round(
+        RAMP_END_Y,
+        2
+    )
 )
 
 print(
-    "Lift:",
+    "Main gradient:",
+    round(
+        MAIN_RAMP_GRADIENT,
+        1
+    ),
+    "%"
+)
+
+print(
+    ""
+)
+
+print(
+    "RAMP VOID:"
+)
+
+print(
+    "X:",
+    round(
+        RAMP_HOLE[0],
+        2
+    ),
+    "to",
+    round(
+        RAMP_HOLE[1],
+        2
+    )
+)
+
+print(
+    "Y:",
+    round(
+        RAMP_HOLE[2],
+        2
+    ),
+    "to",
+    round(
+        RAMP_HOLE[3],
+        2
+    )
+)
+
+print(
+    "GROUND SLAB ABOVE RAMP: NONE"
+)
+
+print(
+    ""
+)
+
+print(
+    "LIFT:"
+)
+
+print(
+    "Lift location:",
     LIFT_X,
     LIFT_Y
 )
 
 print(
-    "Truck route:"
+    "Pit depth:",
+    LIFT_PIT_DEPTH,
+    "m"
 )
 
 print(
-    "STREET -> GARAGE -> RAMP -> B1 -> LIFT"
+    ""
 )
 
 print(
-    "Animation:",
-    FRAME_START,
-    "->",
-    FRAME_END
+    "CONTEXT:"
 )
 
 print(
-    "Camera:",
-    CAMERA.name
+    "- Ground floor enclosed"
 )
 
 print(
-    "=========================================="
+    "- Lobby entrance"
+)
+
+print(
+    "- Street trees"
+)
+
+print(
+    "- Street lights"
+)
+
+print(
+    "- 8 surrounding CBD buildings"
+)
+
+print(
+    "- Retail podium"
+)
+
+print(
+    ""
+)
+
+print(
+    "TRUCK: NOT CREATED"
+)
+
+print(
+    "Truck reference points ready."
+)
+
+print(
+    "=============================================="
 )
